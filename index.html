@@ -826,10 +826,11 @@ function disegnaFiume(){
       feedback(AMICHE[a.tipo].nome, a.frase, true);
     });
   });
-  posizionaFario(false);
+  if(pesce) posizionaFario(false); // alla prima apertura il pesce viene creato subito dopo da ripristinaPesce()
 }
 function posizionaFario(anima){
   const f = $("#fario");
+  if(!f || !pesce) return;
   if(!anima) f.style.transition = "none";
   f.style.transform = "translate("+(pesce.x*CELLA+32)+"px,"+(pesce.y*CELLA+32)+"px) rotate("+pesce.angolo+"deg)";
   if(!anima){ void f.getBoundingClientRect(); f.style.transition = "transform .28s ease"; }
