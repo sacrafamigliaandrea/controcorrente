@@ -96,36 +96,24 @@ header .spazio{flex:1}
   padding:12px 16px; font-size:15px; line-height:1.45; text-align:center;
 }
 .codice-box .parola{font-family:var(--f-display); font-size:21px; letter-spacing:3px; color:var(--verde-scuro); display:block; margin-top:3px}
-.fiume-mappa{margin:26px auto 0; max-width:680px}
-.tratto{
+.fiume-mappa{margin:26px auto 0; max-width:980px}
+.profilo-wrap{
   background:#fff; border:1.5px solid var(--verde-chiaro); border-radius:var(--raggio);
-  box-shadow:var(--ombra); margin-bottom:22px; overflow:hidden;
+  box-shadow:var(--ombra); overflow-x:auto; padding:8px;
 }
-.tratto-testa{
-  display:flex; align-items:baseline; gap:12px; padding:13px 20px;
-  background:var(--verde-chiaro); border-bottom:1.5px solid #d4e5da;
+.profilo-wrap svg{min-width:840px; width:100%; height:auto; display:block}
+.nodo-prof:not(.np-bloccato){cursor:pointer}
+.nodo-prof:not(.np-bloccato):hover circle:nth-of-type(2){filter:brightness(1.08)}
+.nodo-prof .alone{animation:alone 1.9s ease-in-out infinite; transform-origin:center}
+@keyframes alone{0%,100%{opacity:.9}50%{opacity:.18}}
+.geo-cards{display:grid; grid-template-columns:repeat(auto-fit, minmax(230px, 1fr)); gap:14px; margin-top:16px}
+.geo-card{
+  background:#fff; border:1.5px solid var(--verde-chiaro); border-radius:var(--raggio);
+  box-shadow:var(--ombra); padding:14px 16px;
 }
-.tratto-testa h3{font-family:var(--f-display); font-size:19px; margin:0; color:var(--verde-scuro)}
-.tratto-testa .quota{font-size:13.5px; color:var(--ink-soft); font-weight:700}
-.tratto-testa .obiettivo{font-size:13.5px; color:var(--ink-soft); margin-left:auto; text-align:right}
-.livelli-fila{display:flex; gap:14px; padding:18px 20px; flex-wrap:wrap}
-.nodo{
-  flex:1 1 150px; min-width:150px; border:1.5px solid var(--acqua-fonda); border-radius:12px;
-  background:linear-gradient(180deg,#EAF6FA, #DDEFF6); padding:12px 14px; text-align:left;
-  display:flex; flex-direction:column; gap:6px; transition:transform .15s, box-shadow .15s;
-}
-.nodo:not(.bloccato):hover{transform:translateY(-3px); box-shadow:var(--ombra)}
-.nodo .num{
-  font-family:var(--f-display); font-weight:700; font-size:15px; color:#fff;
-  background:var(--fiume); border-radius:999px; padding:2px 11px; align-self:flex-start;
-}
-.nodo .nome{font-weight:700; font-size:15.5px; color:var(--ink)}
-.nodo .stelle{display:flex; gap:3px; height:18px}
-.nodo .stelle svg{width:17px; height:17px}
-.nodo.bloccato{background:#EFF1F1; border-color:#D8DCDD; cursor:default}
-.nodo.bloccato .num{background:var(--pietra)}
-.nodo.bloccato .nome{color:var(--pietra-scura)}
-.nodo .lucchetto{width:16px;height:16px}
+.geo-card .gc-titolo{font-family:var(--f-display); font-weight:600; color:var(--verde-scuro); font-size:15.5px}
+.geo-card .gc-meta{font-size:12.5px; color:var(--ink-soft); font-weight:700; margin:2px 0 7px}
+.geo-card p{margin:0; font-size:14px; line-height:1.5; color:var(--ink-soft)}
 
 /* ---------- Schermata livello ---------- */
 #schermo-livello{max-width:1280px; margin:0 auto; padding:16px 16px 50px}
@@ -276,6 +264,22 @@ header .spazio{flex:1}
 .criteri li.no{color:var(--ink-soft)}
 .scheda .azioni{display:flex; gap:10px; padding:0 26px 24px; flex-wrap:wrap}
 .scheda .azioni .btn{flex:1; justify-content:center}
+.scheda.larga{max-width:780px}
+.doc h4{
+  font-family:var(--f-display); font-size:17px; color:var(--verde-scuro); margin:20px 0 6px;
+  padding:0; background:none; border:none; display:block;
+}
+.doc h4:first-child{margin-top:0}
+.doc p{margin:0 0 10px; font-size:14.5px; line-height:1.6; color:var(--ink)}
+.doc .codici-tab{
+  display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:7px; margin:8px 0 4px;
+}
+.doc .codici-tab span{
+  background:var(--sabbia); border:1px dashed var(--oro); border-radius:8px; padding:6px 10px;
+  font-size:13px; text-align:center;
+}
+.doc .codici-tab b{font-family:var(--f-display); letter-spacing:1px; color:var(--verde-scuro)}
+.doc .firma{margin-top:18px; padding-top:12px; border-top:1.5px solid var(--verde-chiaro); font-size:13px; color:var(--ink-soft)}
 .guida-blocchi{display:flex; flex-direction:column; gap:11px; margin-top:14px}
 .guida-blocchi .riga{display:flex; gap:12px; align-items:center; font-size:14.5px}
 .guida-blocchi .riga .blocco{pointer-events:none; flex:none}
@@ -299,6 +303,7 @@ header .spazio{flex:1}
   <button class="btn-testo nascosto" id="btn-mappa-top">Mappa del fiume</button>
   <button class="btn-testo" id="btn-audio" title="Attiva o disattiva i suoni">Audio: s&igrave;</button>
   <button class="btn-testo" id="btn-guida">Come si gioca</button>
+  <button class="btn-testo" id="btn-docente">Info docente</button>
 </header>
 
 <!-- ============ MAPPA ============ -->
@@ -428,6 +433,83 @@ header .spazio{flex:1}
     </div>
     <div class="azioni">
       <button class="btn primario" id="btn-chiudi-guida">Ho capito, si parte</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- Overlay info docente -->
+<div class="overlay nascosto" id="ov-docente">
+  <div class="scheda larga">
+    <div class="testa"><h3>Controcorrente &mdash; scheda metodologica per il docente</h3></div>
+    <div class="corpo doc">
+
+      <h4>Il progetto in breve</h4>
+      <p>Ambiente di coding a blocchi in stile CodeMonkey per primaria e secondaria di I grado.
+      Lo studente programma le mosse di <b>Fario</b>, una trota fario che risale il fiume Oglio
+      da Orzinuovi a Ponte di Legno: 12 livelli in 4 tratti a difficolt&agrave; crescente, mappati
+      sul corso reale del fiume. Applicazione single-file (HTML/CSS/JS vanilla), nessun dato raccolto,
+      utilizzabile su LIM, Mac di laboratorio e iPad.</p>
+
+      <h4>Quadro di riferimento</h4>
+      <p>Indicazioni Nazionali 2025 (DM 221/2025): informatica integrata nei percorsi di Matematica
+      e Tecnologia all&rsquo;interno delle STEM; pensiero computazionale come riconoscimento di regolarit&agrave;
+      e pattern (L. 233/2021, art. 24 bis); approccio che parte dalla realt&agrave; e dall&rsquo;esperienza
+      dell&rsquo;alunno per giungere alla teoria; errore riconosciuto come parte integrante del lavoro
+      intellettuale, non stigma da evitare.</p>
+
+      <h4>Architettura didattica</h4>
+      <p>I quattro tratti del fiume corrispondono a quattro nuclei del pensiero computazionale:
+      <b>sequenze</b> (Pianura dell&rsquo;Oglio), <b>cicli</b> (Lago d&rsquo;Iseo), <b>istruzioni condizionali</b>
+      (Valle Camonica), <b>pattern complessi e ottimizzazione</b> (Ponte di Legno). La palette dei blocchi
+      &egrave; progressiva: ogni livello mette a disposizione solo le istruzioni pertinenti.
+      Il limite di blocchi per livello (lo &laquo;zaino&raquo;) non &egrave; una punizione ma un vincolo
+      progettuale: al livello 4 rende il ciclo RIPETI l&rsquo;unica strada percorribile, costringendo
+      all&rsquo;astrazione. Il livello 3 &egrave; volutamente prolisso (11 blocchi quasi uguali) per far
+      <i>sentire</i> il bisogno del ciclo prima di introdurlo. Il livello finale si risolve con un unico
+      algoritmo generale di 4 blocchi valido per tutto il percorso: il passaggio dalla sequenza memorizzata
+      alla regola.</p>
+
+      <h4>Interdisciplinarit&agrave;</h4>
+      <p><b>Geografia</b>: il percorso, le quote e i toponimi sono reali (Sarnico, Montisola, Costa Volpino,
+      Capo di Ponte, Edolo, Pezzo); la confluenza di Frigidolfo e Narcanello &egrave; rappresentata nel grafico.
+      <b>Scienze</b>: la trota fario &egrave; autoctona, la trota iridea racconta lei stessa di essere una specie
+      alloctona introdotta dal Nord America. <b>Matematica</b>: la mappa dei livelli &egrave; un profilo
+      altimetrico, cio&egrave; un grafico cartesiano con assi e unit&agrave; di misura reali, utilizzabile per
+      letture e domande sul dislivello. <b>Storia</b>: le incisioni rupestri di Capo di Ponte sono citate
+      come &laquo;istruzioni lasciate sulle rocce&raquo;, aggancio alla verticalit&agrave; del curricolo.</p>
+
+      <h4>Gestione dell&rsquo;errore</h4>
+      <p>Nessun rosso, nessun punteggio negativo, tentativi illimitati. Quando il programma fallisce,
+      il blocco responsabile resta evidenziato e il messaggio in ambra pone una domanda socratica
+      (&laquo;cosa c&rsquo;era davvero davanti al suo muso?&raquo;) seguita dal suggerimento del livello.
+      L&rsquo;obiettivo &egrave; il ciclo prova&ndash;osserva&ndash;correggi, non la risposta esatta al primo colpo.</p>
+
+      <h4>Valutazione</h4>
+      <p>Tre stelle per livello, tre dimensioni osservabili: <b>processo</b> (Fario arriva alla meta),
+      <b>completezza</b> (tutte le larve raccolte), <b>qualit&agrave; della soluzione</b> (numero di blocchi
+      entro la soglia di eleganza). Le tre dimensioni sono riutilizzabili come righe di una rubrica di
+      valutazione di processo e di prodotto; il confronto tra soluzioni diverse della stessa classe
+      &egrave; un&rsquo;ottima attivit&agrave; di peer review.</p>
+
+      <h4>Privacy e accessibilit&agrave;</h4>
+      <p>Nessun localStorage, nessun cookie, nessun dato trasmesso: l&rsquo;app &egrave; adatta a postazioni
+      condivise e non richiede valutazione d&rsquo;impatto. La persistenza &egrave; affidata ai
+      <b>codici di risalita</b>: toponimi del viaggio che lo studente annota sul quaderno e reinserisce
+      per riprendere &mdash; il salvataggio stesso &egrave; ripasso di geografia. Font ad alta leggibilit&agrave;
+      (Atkinson Hyperlegible), suoni disattivabili, preferenza di riduzione del movimento rispettata.</p>
+
+      <h4>Strumenti per il docente</h4>
+      <p>Cinque tocchi sul logo della scuola sbloccano tutti i livelli (modalit&agrave; esplorazione, utile
+      alla LIM). Il parametro <b>?livello=N</b> nell&rsquo;indirizzo apre direttamente un livello.
+      Codici di risalita completi:</p>
+      <div class="codici-tab" id="doc-codici"></div>
+
+      <div class="firma">Scuola Sacra Famiglia &middot; Orzinuovi (BS) &mdash; progetto didattico per il
+      pensiero computazionale, Indicazioni Nazionali 2025. Realizzato dall&rsquo;Animatore Digitale.</div>
+    </div>
+    <div class="azioni">
+      <button class="btn primario" id="btn-chiudi-docente">Chiudi</button>
     </div>
   </div>
 </div>
@@ -1082,30 +1164,98 @@ function sbloccato(id){
   if(tuttoSbloccato || id===1) return true;
   return !!progresso[id-1];
 }
+const QUOTE_LIV = {1:88, 2:110, 3:140, 4:185, 5:185, 6:185, 7:260, 8:420, 9:700, 10:880, 11:1050, 12:1258};
+const STELLA_P = "M0 -8.5 L2.2 -2.6 8 -2 3.6 2 4.9 8 0 4.9 -4.9 8 -3.6 2 -8 -2 -2.2 -2.6 Z";
 function disegnaMappa(){
   const cont = $("#fiume-mappa");
-  cont.innerHTML = "";
-  // dalla sorgente (in alto) alla foce: ordine tratti invertito per la metafora della risalita
-  for(let t=TRATTI.length-1; t>=0; t--){
-    const sez = el("section","tratto");
-    const testa = el("div","tratto-testa",
-      "<h3>Tratto "+(t+1)+" \u00b7 "+TRATTI[t].nome+"</h3><span class='quota'>"+TRATTI[t].quota+"</span><span class='obiettivo'>"+TRATTI[t].obiettivo+"</span>");
-    const geo = el("div","tratto-geo", TRATTI[t].localita + " \u00b7 " + TRATTI[t].geo);
-    const fila = el("div","livelli-fila");
-    LIVELLI.filter(L=>L.tratto===t).forEach(L=>{
-      const ap = sbloccato(L.id);
-      const n = el("button","nodo"+(ap?"":" bloccato"));
-      const st = progresso[L.id] ? progresso[L.id].stelle : 0;
-      n.innerHTML = '<span class="num">Livello '+L.id+'</span><span class="nome">'+L.nome+'</span>'
-        + (ap
-          ? '<span class="stelle">'+[1,2,3].map(i=>STELLA(i<=st)).join("")+'</span>'
-          : '<svg class="lucchetto" viewBox="0 0 24 24" fill="none" stroke="#8E979C" stroke-width="2.2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>');
-      if(ap) n.onclick = ()=>apriLivello(L.id);
-      fila.append(n);
-    });
-    sez.append(testa, geo, fila);
-    cont.append(sez);
+  const W=1000, H=440, padL=64, padR=56, padT=70, padB=92, qMin=40, qMax=1340;
+  const X = i => padL + (i-1)*((W-padL-padR)/11);
+  const Y = q => H-padB - (q-qMin)/(qMax-qMin)*(H-padT-padB);
+  const base = H-padB+36;
+  let frontiera = 12;
+  for(let i=1;i<=12;i++){ if(sbloccato(i) && !progresso[i]){ frontiera=i; break; } }
+
+  let s = '<svg viewBox="0 0 '+W+' '+H+'" role="img" aria-label="Profilo altimetrico del viaggio di Fario lungo l\u2019Oglio">';
+  // bande dei tratti
+  const tinte = ["#F2F8F4","#E9F4F9","#F2F8F4","#EEF1F4"];
+  for(let t=0;t<4;t++){
+    const x0 = t===0 ? 0 : (X(3*t)+X(3*t+1))/2;
+    const x1 = t===3 ? W : (X(3*t+3)+X(3*t+4))/2;
+    s += '<rect x="'+x0.toFixed(1)+'" y="0" width="'+(x1-x0).toFixed(1)+'" height="'+base+'" fill="'+tinte[t]+'"/>';
+    s += '<text x="'+((x0+x1)/2).toFixed(1)+'" y="26" text-anchor="middle" font-family="Fredoka, sans-serif" font-weight="600" font-size="15" fill="#13502E">'+TRATTI[t].nome+'</text>';
+    s += '<text x="'+((x0+x1)/2).toFixed(1)+'" y="44" text-anchor="middle" font-family="Atkinson Hyperlegible, sans-serif" font-size="11.5" fill="#48584F">'+TRATTI[t].localita+'</text>';
   }
+  // griglia delle quote (asse y)
+  [200,600,1000].forEach(q=>{
+    s += '<line x1="26" y1="'+Y(q).toFixed(1)+'" x2="'+(W-16)+'" y2="'+Y(q).toFixed(1)+'" stroke="#C7D4CB" stroke-dasharray="3 6" stroke-width="1"/>'
+      +  '<text x="26" y="'+(Y(q)-5).toFixed(1)+'" font-family="Atkinson Hyperlegible, sans-serif" font-size="11" fill="#8E979C">'+q+' m</text>';
+  });
+  // onde decorative nel lago
+  const lx0=(X(3)+X(4))/2, ly=Y(185);
+  for(let k=0;k<3;k++){
+    s += '<path d="M'+(lx0+12).toFixed(1)+' '+(ly+16+k*13).toFixed(1)
+      +  ' q 9 -6 18 0 t 18 0 t 18 0 t 18 0 t 18 0 t 18 0 t 18 0 t 18 0 t 18 0 t 18 0"'
+      +  ' fill="none" stroke="#7FB8CF" stroke-width="1.6" opacity="'+(0.5-k*0.13)+'"/>';
+  }
+  // area + linea del profilo (spezzata: come un vero grafico di dislivello)
+  let punti = []; for(let i=1;i<=12;i++) punti.push(X(i).toFixed(1)+' '+Y(QUOTE_LIV[i]).toFixed(1));
+  const spezzata = 'M0 '+Y(80).toFixed(1)+' L'+punti.join(' L')+' L'+W+' '+Y(1295).toFixed(1);
+  s += '<path d="'+spezzata+' L'+W+' '+base+' L0 '+base+' Z" fill="#1B6D3F" opacity=".1"/>';
+  s += '<path d="'+spezzata+'" fill="none" stroke="#1B6D3F" stroke-width="3" stroke-linejoin="round"/>';
+  // confluenza: i due torrenti che danno origine all'Oglio
+  const cx=X(12), cy=Y(1258);
+  s += '<path d="M'+(cx-34).toFixed(1)+' '+(cy-62).toFixed(1)+' L'+cx.toFixed(1)+' '+cy.toFixed(1)+'" stroke="#2C7DA0" stroke-width="2" stroke-dasharray="4 4" fill="none"/>'
+    +  '<path d="M'+(cx+14).toFixed(1)+' '+(cy-74).toFixed(1)+' L'+cx.toFixed(1)+' '+cy.toFixed(1)+'" stroke="#2C7DA0" stroke-width="2" stroke-dasharray="4 4" fill="none"/>'
+    +  '<text x="'+(cx-38).toFixed(1)+'" y="'+(cy-66).toFixed(1)+'" text-anchor="end" font-family="Atkinson Hyperlegible, sans-serif" font-size="10.5" fill="#1E5F7C">Frigidolfo</text>'
+    +  '<text x="'+(cx+18).toFixed(1)+'" y="'+(cy-78).toFixed(1)+'" text-anchor="end" font-family="Atkinson Hyperlegible, sans-serif" font-size="10.5" fill="#1E5F7C">Narcanello</text>';
+  // etichetta di partenza
+  s += '<text x="'+X(1).toFixed(1)+'" y="'+(base+22)+'" text-anchor="middle" font-family="Atkinson Hyperlegible, sans-serif" font-size="11.5" font-weight="700" fill="#48584F">Partenza \u00b7 88 m</text>'
+    +  '<text x="'+X(12).toFixed(1)+'" y="'+(base+22)+'" text-anchor="middle" font-family="Atkinson Hyperlegible, sans-serif" font-size="11.5" font-weight="700" fill="#48584F">Qui nasce l\u2019Oglio \u00b7 1258 m</text>';
+  // nodi dei livelli
+  for(let i=1;i<=12;i++){
+    const ap = sbloccato(i), fatto = !!progresso[i];
+    const st = fatto ? progresso[i].stelle : 0;
+    const x = X(i), y = Y(QUOTE_LIV[i]);
+    s += '<g class="nodo-prof'+(ap?'':' np-bloccato')+'" data-liv="'+i+'" transform="translate('+x.toFixed(1)+' '+y.toFixed(1)+')">';
+    s += '<title>Livello '+i+' \u00b7 '+LIVELLI[i-1].nome+'</title>';
+    s += '<circle r="26" fill="#fff" opacity="0"/>';
+    if(i===frontiera && ap && !fatto) s += '<circle class="alone" r="23" fill="none" stroke="#D9A521" stroke-width="3"/>';
+    if(fatto)      s += '<circle r="15.5" fill="#1B6D3F" stroke="#fff" stroke-width="2.5"/>';
+    else if(ap)    s += '<circle r="15.5" fill="#fff" stroke="#1B6D3F" stroke-width="3"/>';
+    else           s += '<circle r="15.5" fill="#ECEFEF" stroke="#AEB6BA" stroke-width="2"/>';
+    s += '<text y="5" text-anchor="middle" font-family="Fredoka, sans-serif" font-weight="700" font-size="14" fill="'+(fatto?'#fff':(ap?'#13502E':'#8E979C'))+'">'+i+'</text>';
+    if(ap){
+      for(let k=1;k<=3;k++){
+        s += '<path d="'+STELLA_P+'" transform="translate('+((k-2)*15)+' 31) scale(.78)" fill="'+(k<=st?'#D9A521':'#E0E4E0')+'" stroke="'+(k<=st?'#B5860F':'#C7CDC7')+'" stroke-width="1"/>';
+      }
+    } else {
+      s += '<g transform="translate(0 31)"><rect x="-5" y="-2" width="10" height="8" rx="1.5" fill="none" stroke="#AEB6BA" stroke-width="1.8"/><path d="M-3 -2 v-2 a3 3 0 0 1 6 0 v2" fill="none" stroke="#AEB6BA" stroke-width="1.8"/></g>';
+    }
+    s += '</g>';
+    // Fario sul fronte di risalita, rivolto verso destra (direzione del viaggio)
+    if(i===frontiera && ap && !fatto){
+      s += '<g transform="translate('+x.toFixed(1)+' '+(y-46).toFixed(1)+') rotate(90) scale(.55)" pointer-events="none">'
+        +  '<path d="M0 -22 C 11 -12, 11 11, 0 20 C -11 11, -11 -12, 0 -22 Z" fill="#F4EFE2" stroke="#13502E" stroke-width="2.6"/>'
+        +  '<path d="M0 20 L 8 30 L 0 26 L -8 30 Z" fill="#F4EFE2" stroke="#13502E" stroke-width="2.6" stroke-linejoin="round"/>'
+        +  '<circle cx="-3.6" cy="-12" r="2.2" fill="#1C2B22"/><circle cx="3.6" cy="-12" r="2.2" fill="#1C2B22"/>'
+        +  '<circle cx="-3" cy="0" r="2.2" fill="#D9A521"/><circle cx="3" cy="8" r="2.2" fill="#D9A521"/>'
+        +  '</g>';
+    }
+  }
+  s += '</svg>';
+
+  // carte geografiche dei tratti
+  let gc = '<div class="geo-cards">';
+  TRATTI.forEach((T,t)=>{
+    gc += '<div class="geo-card"><div class="gc-titolo">Tratto '+(t+1)+' \u00b7 '+T.nome+'</div>'
+       +  '<div class="gc-meta">'+T.localita+' \u00b7 '+T.quota+'</div><p>'+T.geo+'</p></div>';
+  });
+  gc += '</div>';
+
+  cont.innerHTML = '<div class="profilo-wrap">'+s+'</div>' + gc;
+  cont.querySelectorAll('.nodo-prof:not(.np-bloccato)').forEach(g=>{
+    g.addEventListener('click', ()=>apriLivello(Number(g.dataset.liv)));
+  });
 }
 function apriLivello(id){
   liv = LIVELLI.find(L=>L.id===id);
@@ -1167,6 +1317,12 @@ $("#btn-guida").onclick = ()=>{
   $("#ov-guida").classList.remove("nascosto");
 };
 $("#btn-chiudi-guida").onclick = ()=>$("#ov-guida").classList.add("nascosto");
+$("#btn-docente").onclick = ()=>{
+  const t = $("#doc-codici");
+  t.innerHTML = Object.keys(CODICI).map(k=>"<span>Liv. "+k+" \u00b7 <b>"+CODICI[k]+"</b></span>").join("");
+  $("#ov-docente").classList.remove("nascosto");
+};
+$("#btn-chiudi-docente").onclick = ()=>$("#ov-docente").classList.add("nascosto");
 $("#btn-audio").onclick = ()=>{
   audioOn = !audioOn;
   $("#btn-audio").innerHTML = "Audio: " + (audioOn ? "s\u00ec" : "no");
