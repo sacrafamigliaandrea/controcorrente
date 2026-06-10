@@ -138,8 +138,8 @@ header .spazio{flex:1}
 .chip.oro{background:#FBF3DC; color:#8a6a12; border-color:#ecd9a4}
 .barra-livello .spazio{flex:1}
 
-.area-gioco{display:grid; grid-template-columns:minmax(0,1fr) 390px; gap:16px; align-items:start}
-@media (max-width:980px){ .area-gioco{grid-template-columns:1fr} }
+.area-gioco{display:grid; grid-template-columns:440px minmax(0,1fr); gap:16px; align-items:start}
+@media (max-width:1080px){ .area-gioco{grid-template-columns:1fr} }
 
 .pannello{
   background:#fff; border:1.5px solid var(--verde-chiaro); border-radius:var(--raggio);
@@ -157,8 +157,28 @@ header .spazio{flex:1}
 
 .lato{display:flex; flex-direction:column; gap:14px}
 
+/* Workspace di programmazione */
+.ws-corpo{display:flex; align-items:stretch}
+.ws-palette{width:232px; flex:none; background:var(--sabbia); border-right:1.5px solid #E4DCC8; display:flex; flex-direction:column}
+.ws-palette .titoletto{
+  font-family:var(--f-display); font-size:13px; color:var(--ink-soft);
+  padding:11px 15px 2px; letter-spacing:1px; text-transform:uppercase;
+}
+.ws-canvas{
+  flex:1; min-height:540px; max-height:72vh; overflow:auto;
+  background-image:radial-gradient(circle, #D7E4DB 1.3px, transparent 1.3px);
+  background-size:22px 22px;
+}
+@media (max-width:1080px){
+  .ws-corpo{flex-direction:column}
+  .ws-palette{width:100%; border-right:none; border-bottom:1.5px solid #E4DCC8}
+  .ws-palette .palette{flex-direction:row; flex-wrap:wrap}
+  .ws-canvas{min-height:380px}
+}
+
 /* Blocchi */
-.palette{display:flex; flex-wrap:wrap; gap:8px; padding:12px}
+.palette{display:flex; flex-direction:column; gap:9px; padding:10px 15px 16px}
+.palette .blocco{justify-content:flex-start}
 .blocco{
   display:inline-flex; align-items:center; gap:8px; user-select:none; -webkit-user-select:none;
   border-radius:11px; padding:9px 13px; font-weight:700; font-size:14.5px; color:#fff;
@@ -172,13 +192,32 @@ header .spazio{flex:1}
 .blocco.in-palette:active{cursor:grabbing}
 
 #lista-programma{
-  min-height:170px; max-height:46vh; overflow-y:auto; padding:12px;
-  display:flex; flex-direction:column; gap:7px; align-items:stretch;
+  min-height:100%; padding:18px 20px 60px;
+  display:flex; flex-direction:column; gap:0; align-items:flex-start;
 }
-#lista-programma .blocco{justify-content:flex-start}
-#lista-programma:empty::after, .corpo-ripeti:empty::after{
-  content:attr(data-vuoto); color:var(--pietra); font-weight:400; font-size:13.5px;
-  border:2px dashed var(--acqua-fonda); border-radius:10px; padding:14px; text-align:center; display:block;
+#lista-programma .blocco{justify-content:flex-start; min-width:252px; margin-bottom:2px}
+.corpo-ripeti > .blocco{margin-bottom:2px}
+/* calamita: tacca scura in alto (presa) e linguetta in basso (innesto), stile puzzle */
+#lista-programma .blocco:not(.cappello)::before, .corpo-ripeti > .blocco::before{
+  content:""; position:absolute; left:18px; top:0; width:22px; height:6px;
+  background:rgba(0,0,0,.16); border-radius:0 0 6px 6px; pointer-events:none;
+}
+#lista-programma .blocco::after, .corpo-ripeti > .blocco::after{
+  content:""; position:absolute; left:18px; bottom:-6px; width:22px; height:7px;
+  background:inherit; border-radius:0 0 6px 6px; z-index:2; pointer-events:none;
+}
+.blocco.cappello{
+  background:var(--verde-scuro); cursor:default; border-radius:16px 16px 9px 9px; min-width:252px;
+}
+.slot-vuoto{
+  border:2.5px dashed var(--acqua-fonda); border-radius:10px; padding:15px 18px;
+  color:var(--pietra); font-size:13.5px; line-height:1.45; max-width:310px; margin-top:6px;
+}
+@keyframes aggancio{0%{transform:translateY(-7px)}65%{transform:translateY(1.5px)}100%{transform:translateY(0)}}
+.blocco.aggancio{animation:aggancio .2s ease-out}
+.corpo-ripeti:empty::after{
+  content:attr(data-vuoto); color:rgba(255,255,255,.85); font-weight:400; font-size:13px;
+  border:2px dashed rgba(255,255,255,.55); border-radius:8px; padding:11px; text-align:center; display:block;
 }
 .blocco .x{
   margin-left:auto; width:21px; height:21px; border-radius:999px; border:none;
@@ -204,7 +243,14 @@ header .spazio{flex:1}
   position:fixed; z-index:200; pointer-events:none; opacity:.92;
   transform:translate(-50%,-50%) rotate(-2deg) scale(1.04); box-shadow:0 10px 22px rgba(0,0,0,.3);
 }
-.indicatore-drop{height:4px; border-radius:2px; background:var(--oro); margin:1px 4px}
+.indicatore-drop{
+  height:10px; width:252px; border-radius:6px; margin:2px 0;
+  background:linear-gradient(90deg, var(--oro), #F2C14E); position:relative; pointer-events:none;
+}
+.indicatore-drop::after{
+  content:""; position:absolute; left:18px; bottom:-5px; width:22px; height:5px;
+  background:#F2C14E; border-radius:0 0 5px 5px;
+}
 .drop-attivo{outline:2.5px dashed var(--oro); outline-offset:3px; border-radius:11px}
 
 /* Controlli */
@@ -382,12 +428,16 @@ header .spazio{flex:1}
 
     <div class="lato">
       <div class="pannello">
-        <h4>Blocchi <span class="mini">tocca o trascina nel programma</span></h4>
-        <div class="palette" id="palette"></div>
-      </div>
-      <div class="pannello">
         <h4>Programma di Fario <span class="mini" id="mini-conteggio"></span></h4>
-        <div id="lista-programma" data-vuoto="Trascina qui i blocchi: si eseguono dall&rsquo;alto verso il basso"></div>
+        <div class="ws-corpo">
+          <div class="ws-palette">
+            <div class="titoletto">Mattoncini</div>
+            <div class="palette" id="palette"></div>
+          </div>
+          <div class="ws-canvas">
+            <div id="lista-programma"></div>
+          </div>
+        </div>
         <div class="controlli">
           <button class="btn primario" id="btn-esegui">
             <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>
@@ -819,6 +869,7 @@ let programma = [];        // [{id,type,n,body[]}]
 let prossimoId = 1;
 let inEsecuzione = false;
 let stopRichiesto = false;
+let ultimoAggancio = 0;
 
 function telemetria(evento, dettagli){ /* hook: Image pixel GET -> Apps Script */ }
 
@@ -956,7 +1007,7 @@ function disegnaFiume(){
       + trotaSVG(STILE_TROTE[a.tipo].grad, STILE_TROTE[a.tipo]) + '</g>';
   });
 
-  const s = '<svg id="svg-fiume" viewBox="0 0 '+W+' '+H+'" width="'+Math.min(W,560)+'" role="img" aria-label="Mappa del fiume">'
+  const s = '<svg id="svg-fiume" viewBox="0 0 '+W+' '+H+'" width="'+Math.min(W,392)+'" role="img" aria-label="Mappa del fiume">'
     + '<defs>'
     + '<linearGradient id="gradAcqua" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#BFE2EF"/><stop offset="1" stop-color="#8EC6DB"/></linearGradient>'
     + '<linearGradient id="gradCascata" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#CBE9F4"/><stop offset="1" stop-color="#7FB8CF"/></linearGradient>'
@@ -1069,13 +1120,20 @@ function elementoBlocco(nodo, inPalette){
       b.append(x);
     }
   }
+  if(!inPalette && nodo.id === ultimoAggancio) b.classList.add("aggancio");
   agganciaPointer(b, inPalette, nodo);
   return b;
 }
+const ICONA_BANDIERA = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4"/><path d="M5 4h12l-2.5 4L17 12H5"/></svg>';
 function renderProgramma(){
   const lp = $("#lista-programma");
   lp.innerHTML = "";
+  lp.append(el("div","blocco cappello", ICONA_BANDIERA+"<span>QUANDO PREMI ESEGUI</span>"));
+  if(programma.length===0){
+    lp.append(el("div","slot-vuoto","Aggancia qui il primo blocco: tocca un mattoncino oppure trascinalo in questo spazio."));
+  }
   programma.forEach(n=>lp.append(elementoBlocco(n,false)));
+  ultimoAggancio = 0;
   aggiornaHUD();
 }
 function rimuoviNodo(id){
@@ -1122,7 +1180,9 @@ function agganciaPointer(elB, inPalette, nodo){
     if(!d.partito){
       if(d.daPalette){ // tap: aggiungi in fondo
         if(contaBlocchi(programma) >= liv.max){ feedback("Zaino pieno!","Hai raggiunto il numero massimo di blocchi: prova a usarne meno, magari con RIPETI.",false); return; }
-        programma.push(nuovoNodo(d.nodo.type));
+        const nb = nuovoNodo(d.nodo.type);
+        programma.push(nb);
+        ultimoAggancio = nb.id;
         sfx.pop();
         renderProgramma();
       }
@@ -1153,11 +1213,24 @@ function bersaglioSotto(x,y,nodo){
 function evidenziaDrop(x,y){
   pulisciDrop();
   const t = bersaglioSotto(x,y,drag.nodo);
-  if(t) t.classList.add("drop-attivo");
+  if(!t) return;
+  t.classList.add("drop-attivo");
+  const escludi = drag.daPalette ? null : drag.nodo.id;
+  const idx = indiceInserimento(t, y, escludi);
+  const figli = figliBlocco(t, escludi);
+  const ind = el("div","indicatore-drop");
+  t.insertBefore(ind, figli[idx] || null);
 }
-function pulisciDrop(){ bersagliDrop().forEach(b=>b && b.classList.remove("drop-attivo")); }
+function pulisciDrop(){
+  bersagliDrop().forEach(b=>b && b.classList.remove("drop-attivo"));
+  document.querySelectorAll(".indicatore-drop").forEach(e=>e.remove());
+}
+function figliBlocco(target, escludiId){
+  return [...target.children].filter(c=>c.classList && c.classList.contains("blocco")
+    && !c.classList.contains("cappello") && c.dataset.bid != escludiId);
+}
 function indiceInserimento(target, y, escludiId){
-  const figli = [...target.children].filter(c=>c.classList && c.classList.contains("blocco") && c.dataset.bid != escludiId);
+  const figli = figliBlocco(target, escludiId);
   let i = 0;
   for(const f of figli){
     const r = f.getBoundingClientRect();
@@ -1191,6 +1264,7 @@ function eseguiDrop(d, x, y){
     const rip = trovaNodo(programma, Number(target.dataset.contiene));
     if(rip) rip.b.body.splice(idx,0,nodo); else programma.push(nodo);
   }
+  ultimoAggancio = nodo.id;
   renderProgramma();
 }
 
