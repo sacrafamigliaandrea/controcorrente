@@ -687,6 +687,10 @@ function sbuffo(dur, vol, freq, t0){ // soffio d'acqua filtrato
   g.gain.exponentialRampToValueAtTime(.0001, t+dur);
   s.connect(f); f.connect(g); g.connect(masterA); s.start(t); s.stop(t+dur+.05);
 }
+function campana(f, t0, dur, vol){ // timbro a campana: fondamentale + parziale acuto che decade prima
+  nota("sine", f, null, dur, vol, t0);
+  nota("sine", f*3, null, dur*.45, vol*.22, t0);
+}
 const sfx = {
   pronto(){ try{ if(audioOn) ctxAudio(); }catch(e){} },
   bloop(){ if(!audioOn) return; try{ nota("sine", 400, 175, .14, .16); sbuffo(.12, .1, 1300, 0); }catch(e){} },
@@ -695,9 +699,34 @@ const sfx = {
   gnam(){ if(!audioOn) return; try{ nota("sine", 740, null, .08, .14); nota("sine", 1020, null, .1, .14, .07); }catch(e){} },
   pop(){ if(!audioOn) return; try{ nota("sine", 330, 480, .07, .1); }catch(e){} },
   urto(){ if(!audioOn) return; try{ nota("sine", 130, 70, .22, .22); sbuffo(.16, .12, 420, 0); }catch(e){} },
-  vittoria(){ if(!audioOn) return; try{
-    [523, 659, 784, 1047].forEach((f,i)=>nota("triangle", f, null, .2, .16, i*.13));
-    [1500, 2200, 1800].forEach((f,i)=>sbuffo(.14, .08, f, .55 + i*.1)); // bollicine finali
+  vittoria(stelle){ if(!audioOn) return; try{
+    // Fanfara in Sol maggiore (~2.5 s). Le prime tre note sono sincronizzate
+    // con il pop delle tre stelle nell'overlay (animation-delay 0 / .18 / .36 s).
+    const G4=392, B4=494, D5=587, E5=659, FS5=740, G5=784, G2=98, G3=196, D6=1175, G6=1568, B6=1976;
+    // 1) tre note ascendenti = tre stelle
+    nota("triangle", G4, null, .17, .17, 0.00);
+    nota("triangle", B4, null, .17, .17, 0.18);
+    nota("triangle", D5, null, .17, .17, 0.36);
+    // 2) slancio sulla tonica acuta
+    nota("triangle", G5, null, .34, .19, 0.56);
+    // 3) volta melodica
+    nota("triangle", E5,  null, .14, .15, 0.96);
+    nota("triangle", FS5, null, .14, .15, 1.12);
+    // 4) accordo finale con basso e brillantezza
+    nota("triangle", G5, null, .8, .17, 1.28);
+    nota("sine", B4, null, .8, .09, 1.28);
+    nota("sine", D5, null, .8, .09, 1.28);
+    nota("sine", G2, null, .9, .14, 1.28);
+    nota("sine", G3, null, .9, .08, 1.28);
+    campana(D6, 1.46, .5, .11);
+    campana(G6, 1.62, .6, .10);
+    sbuffo(.5, .05, 2600, 1.30); // fruscio d'acqua sull'accordo
+    // 5) cascata extra solo a 3 stelle: la perfezione suona diversa
+    if(stelle === 3){
+      campana(G6, 1.95, .3, .09);
+      campana(B6, 2.08, .3, .08);
+      campana(D6*2, 2.21, .45, .08);
+    }
   }catch(e){} },
 };
 document.addEventListener("pointerdown", ()=>sfx.pronto(), true); // sblocco iOS al primo tocco
@@ -1143,11 +1172,11 @@ const SPUNTA = ok => ok
   ? '<svg viewBox="0 0 24 24" fill="none" stroke="#1B6D3F" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
   : '<svg viewBox="0 0 24 24" fill="none" stroke="#8E979C" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="8.6"/></svg>';
 function vittoria(){
-  sfx.vittoria();
   const n = contaBlocchi(programma);
   const tutteLarve = pesce.mangiate.size === mondo.larve.size;
   const elegante = n <= liv.par;
   const stelle = 1 + (tutteLarve?1:0) + (elegante?1:0);
+  sfx.vittoria(stelle);
   const prima = progresso[liv.id] ? progresso[liv.id].stelle : 0;
   progresso[liv.id] = { stelle: Math.max(prima, stelle) };
   telemetria("vittoria", {livello:liv.id, stelle, blocchi:n});
