@@ -123,8 +123,12 @@ header .spazio{flex:1}
 .geo-card p{margin:0; font-size:14px; line-height:1.5; color:var(--ink-soft)}
 
 /* ---------- Schermata livello ---------- */
-#schermo-livello{max-width:1280px; margin:0 auto; padding:16px 16px 50px}
+#schermo-livello{
+  max-width:1560px; margin:0 auto; padding:12px 16px 14px;
+  height:calc(100dvh - 80px); display:flex; flex-direction:column; overflow:hidden;
+}
 .barra-livello{
+  flex:none;
   display:flex; align-items:center; gap:12px; flex-wrap:wrap;
   background:#fff; border:1.5px solid var(--verde-chiaro); border-radius:var(--raggio);
   padding:10px 16px; box-shadow:var(--ombra); margin-bottom:14px;
@@ -138,8 +142,18 @@ header .spazio{flex:1}
 .chip.oro{background:#FBF3DC; color:#8a6a12; border-color:#ecd9a4}
 .barra-livello .spazio{flex:1}
 
-.area-gioco{display:grid; grid-template-columns:440px minmax(0,1fr); gap:16px; align-items:start}
-@media (max-width:1080px){ .area-gioco{grid-template-columns:1fr} }
+.area-gioco{
+  flex:1; min-height:0;
+  display:grid; grid-template-columns:440px minmax(0,1fr); gap:16px; align-items:stretch;
+}
+.area-gioco > .pannello{display:flex; flex-direction:column; min-height:0}
+.lato{min-height:0}
+.lato .pannello{height:100%; display:flex; flex-direction:column; min-height:0}
+@media (max-width:1080px){
+  #schermo-livello{height:auto; overflow:visible}
+  .area-gioco{grid-template-columns:1fr}
+  #contenitore-fiume{height:340px; flex:none}
+}
 
 .pannello{
   background:#fff; border:1.5px solid var(--verde-chiaro); border-radius:var(--raggio);
@@ -152,8 +166,12 @@ header .spazio{flex:1}
 }
 .pannello h4 .mini{font-family:var(--f-body); font-size:12.5px; font-weight:400; color:var(--ink-soft); margin-left:auto}
 
-#contenitore-fiume{padding:14px; display:flex; justify-content:center; background:linear-gradient(180deg,#fff, #F2F8FA)}
-#svg-fiume{max-width:100%; height:auto; touch-action:manipulation}
+#contenitore-fiume{
+  flex:1; min-height:0; padding:10px;
+  display:flex; justify-content:center; align-items:center;
+  background:linear-gradient(180deg,#fff, #F2F8FA);
+}
+#svg-fiume{width:100%; height:100%; touch-action:manipulation}
 
 .lato{display:flex; flex-direction:column; gap:14px}
 
@@ -164,16 +182,18 @@ header .spazio{flex:1}
   font-family:var(--f-display); font-size:13px; color:var(--ink-soft);
   padding:11px 15px 2px; letter-spacing:1px; text-transform:uppercase;
 }
+.ws-corpo{flex:1; min-height:0}
+.ws-palette{overflow-y:auto}
 .ws-canvas{
-  flex:1; min-height:540px; max-height:72vh; overflow:auto;
+  flex:1; min-height:0; overflow:auto;
   background-image:radial-gradient(circle, #D7E4DB 1.3px, transparent 1.3px);
   background-size:22px 22px;
 }
 @media (max-width:1080px){
-  .ws-corpo{flex-direction:column}
+  .ws-corpo{flex-direction:column; min-height:420px}
   .ws-palette{width:100%; border-right:none; border-bottom:1.5px solid #E4DCC8}
   .ws-palette .palette{flex-direction:row; flex-wrap:wrap}
-  .ws-canvas{min-height:380px}
+  .ws-canvas{min-height:300px}
 }
 
 /* Blocchi */
@@ -254,7 +274,7 @@ header .spazio{flex:1}
 .drop-attivo{outline:2.5px dashed var(--oro); outline-offset:3px; border-radius:11px}
 
 /* Controlli */
-.controlli{display:flex; gap:9px; padding:12px; flex-wrap:wrap}
+.controlli{flex:none; display:flex; gap:9px; padding:12px; flex-wrap:wrap}
 .btn{
   border:none; border-radius:11px; padding:11px 18px; font-weight:700; font-size:15.5px;
   font-family:var(--f-display); letter-spacing:.3px; box-shadow:0 2.5px 0 rgba(0,0,0,.2);
@@ -269,7 +289,7 @@ header .spazio{flex:1}
 .btn:disabled{opacity:.45; cursor:default}
 
 /* HUD */
-.hud{display:flex; gap:8px; padding:0 12px 12px; flex-wrap:wrap}
+.hud{flex:none; display:flex; gap:8px; padding:0 12px 12px; flex-wrap:wrap}
 .hud .dato{
   display:flex; align-items:center; gap:7px; background:var(--sabbia); border-radius:10px;
   padding:7px 12px; font-size:14px; font-weight:700; color:var(--ink-soft);
@@ -359,7 +379,6 @@ header .spazio{flex:1}
   <button class="btn-testo nascosto" id="btn-mappa-top">Mappa del fiume</button>
   <button class="btn-testo" id="btn-cartina" title="La cartina del viaggio di Fario">Cartina</button>
   <button class="btn-testo" id="btn-musica" title="Musica di sottofondo">Musica: no</button>
-  <button class="btn-testo" id="btn-audio" title="Attiva o disattiva gli effetti sonori">Effetti: s&igrave;</button>
   <button class="btn-testo" id="btn-guida">Come si gioca</button>
   <button class="btn-testo" id="btn-docente">Info docente</button>
 </header>
@@ -743,7 +762,6 @@ function ctxAudio(){
     ctxA = new (window.AudioContext || window.webkitAudioContext)();
     masterA = ctxA.createGain(); masterA.gain.value = .55; masterA.connect(ctxA.destination);
     bufRumore = creaRumore(2);
-    avviaAmbienteFiume();
   }
   if(ctxA.state === "suspended") ctxA.resume();
   return ctxA;
@@ -754,17 +772,6 @@ function creaRumore(sec){
   let v = 0;
   for(let i=0;i<d.length;i++){ const w = Math.random()*2-1; v = (v + .025*w)/1.025; d[i] = v*3.2; } // rumore "marrone": acqua
   return b;
-}
-function avviaAmbienteFiume(){ // mormorio continuo del fiume, molto basso
-  const c = ctxA;
-  const src = c.createBufferSource(); src.buffer = bufRumore; src.loop = true;
-  const f = c.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 640; f.Q.value = .6;
-  const g = c.createGain(); g.gain.value = .05;
-  const lfo = c.createOscillator(); lfo.frequency.value = .16;
-  const lg = c.createGain(); lg.gain.value = 170;
-  lfo.connect(lg); lg.connect(f.frequency);
-  src.connect(f); f.connect(g); g.connect(masterA);
-  src.start(); lfo.start();
 }
 function nota(tipo, f0, f1, dur, vol, t0){
   const c = ctxAudio(), t = c.currentTime + (t0||0);
@@ -1142,57 +1149,78 @@ function rimuoviNodo(id){
   if(r){ r.lista.splice(r.lista.indexOf(r.b),1); renderProgramma(); }
 }
 
-/* ================= DRAG & DROP (Pointer Events) ================= */
-let drag = null; // {nodo, daPalette, ghost, partito, sx, sy}
+/* ================= DRAG & DROP (Pointer Events, gestori globali) =================
+   I movimenti e il rilascio sono ascoltati su window, mai sul singolo blocco:
+   cosi' il fine-trascinamento arriva SEMPRE, anche se il puntatore esce dal blocco,
+   dalla finestra o se il browser perde la cattura. Niente fantasmi orfani. */
+let drag = null; // {nodo, daPalette, sorgente, ghost, partito, sx, sy, pid}
+
+function annullaDrag(){
+  if(!drag) return;
+  if(drag.ghost) drag.ghost.remove();
+  if(drag.sorgente && !drag.daPalette) drag.sorgente.style.opacity = "";
+  pulisciDrop();
+  drag = null;
+}
+
 function agganciaPointer(elB, inPalette, nodo){
   elB.addEventListener("pointerdown", ev=>{
     if(inEsecuzione) return;
     if(ev.target.closest(".x") || ev.target.closest(".contan")) return;
-    // se tocco un figlio dentro un ripeti, gestisce il figlio (stopPropagation)
+    if(ev.pointerType === "mouse" && ev.button !== 0) return; // solo tasto sinistro
     ev.stopPropagation();
-    drag = { daPalette:inPalette, nodo, partito:false, sx:ev.clientX, sy:ev.clientY, sorgente:elB };
-    elB.setPointerCapture(ev.pointerId);
+    annullaDrag(); // sicurezza: mai due trascinamenti sovrapposti
+    drag = { daPalette:inPalette, nodo, partito:false, sx:ev.clientX, sy:ev.clientY,
+             sorgente:elB, pid:ev.pointerId, ghost:null };
   });
-  elB.addEventListener("pointermove", ev=>{
-    if(!drag || drag.sorgente!==elB) return;
-    const dx=ev.clientX-drag.sx, dy=ev.clientY-drag.sy;
-    if(!drag.partito && Math.hypot(dx,dy)>8){
-      drag.partito = true;
-      const g = elB.cloneNode(true);
-      g.classList.add("fantasma"); g.classList.remove("in-palette");
-      g.style.width = elB.getBoundingClientRect().width+"px";
-      document.body.append(g);
-      drag.ghost = g;
-      if(!drag.daPalette) elB.style.opacity = ".35";
-    }
-    if(drag.partito){
-      drag.ghost.style.left = ev.clientX+"px";
-      drag.ghost.style.top = ev.clientY+"px";
-      evidenziaDrop(ev.clientX, ev.clientY);
-    }
-  });
-  const fine = ev=>{
-    if(!drag || drag.sorgente!==elB) return;
-    const d = drag; drag = null;
-    if(d.ghost) d.ghost.remove();
-    if(!d.daPalette) elB.style.opacity = "";
-    pulisciDrop();
-    if(!d.partito){
-      if(d.daPalette){ // tap: aggiungi in fondo
-        if(contaBlocchi(programma) >= liv.max){ feedback("Zaino pieno!","Hai raggiunto il numero massimo di blocchi: prova a usarne meno, magari con RIPETI.",false); return; }
-        const nb = nuovoNodo(d.nodo.type);
-        programma.push(nb);
-        ultimoAggancio = nb.id;
-        sfx.pop();
-        renderProgramma();
-      }
-      return;
-    }
-    eseguiDrop(d, ev.clientX, ev.clientY);
-  };
-  elB.addEventListener("pointerup", fine);
-  elB.addEventListener("pointercancel", fine);
 }
+
+window.addEventListener("pointermove", ev=>{
+  if(!drag || ev.pointerId !== drag.pid) return;
+  const dx = ev.clientX - drag.sx, dy = ev.clientY - drag.sy;
+  if(!drag.partito && Math.hypot(dx,dy) > 8){
+    drag.partito = true;
+    const g = drag.sorgente.cloneNode(true);
+    g.classList.add("fantasma"); g.classList.remove("in-palette");
+    g.style.width = drag.sorgente.getBoundingClientRect().width + "px";
+    document.body.append(g);
+    drag.ghost = g;
+    if(!drag.daPalette) drag.sorgente.style.opacity = ".35";
+  }
+  if(drag.partito){
+    drag.ghost.style.left = ev.clientX + "px";
+    drag.ghost.style.top = ev.clientY + "px";
+    evidenziaDrop(ev.clientX, ev.clientY);
+    if(ev.cancelable) ev.preventDefault();
+  }
+}, {passive:false});
+
+function fineDrag(ev){
+  if(!drag || (ev.pointerId !== undefined && ev.pointerId !== drag.pid)) return;
+  const d = drag; drag = null;
+  if(d.ghost) d.ghost.remove();
+  if(!d.daPalette && d.sorgente) d.sorgente.style.opacity = "";
+  pulisciDrop();
+  if(!d.partito){
+    if(d.daPalette){ // tap: aggancia in fondo al programma
+      if(contaBlocchi(programma) >= liv.max){
+        feedback("Zaino pieno!","Hai raggiunto il numero massimo di blocchi: prova a usarne meno, magari con RIPETI.",false);
+        return;
+      }
+      const nb = nuovoNodo(d.nodo.type);
+      programma.push(nb);
+      ultimoAggancio = nb.id;
+      sfx.pop();
+      renderProgramma();
+    }
+    return;
+  }
+  eseguiDrop(d, ev.clientX, ev.clientY);
+}
+window.addEventListener("pointerup", fineDrag);
+window.addEventListener("pointercancel", fineDrag);
+window.addEventListener("blur", annullaDrag);
+
 function bersagliDrop(){
   const lista = [ $("#lista-programma") ];
   document.querySelectorAll(".corpo-ripeti").forEach(c=>lista.push(c));
@@ -1205,10 +1233,23 @@ function bersaglioSotto(x,y,nodo){
   if(t && nodo.type!=="ripeti") return t;       // niente ripeti dentro ripeti
   t = sotto.closest("#lista-programma");
   if(t) return t;
-  // tolleranza: vicino al pannello programma
+  // tolleranza: vicino alla tela del programma
   const lp = $("#lista-programma").getBoundingClientRect();
   if(x>lp.left-20 && x<lp.right+20 && y>lp.top-20 && y<lp.bottom+20) return $("#lista-programma");
   return null;
+}
+function figliBlocco(target, escludiId){
+  return [...target.children].filter(c=>c.classList && c.classList.contains("blocco")
+    && !c.classList.contains("cappello") && c.dataset.bid != escludiId);
+}
+function indiceInserimento(target, y, escludiId){
+  const figli = figliBlocco(target, escludiId);
+  let i = 0;
+  for(const f of figli){
+    const r = f.getBoundingClientRect();
+    if(y > r.top + r.height/2) i++;
+  }
+  return i;
 }
 function evidenziaDrop(x,y){
   pulisciDrop();
@@ -1224,23 +1265,11 @@ function evidenziaDrop(x,y){
 function pulisciDrop(){
   bersagliDrop().forEach(b=>b && b.classList.remove("drop-attivo"));
   document.querySelectorAll(".indicatore-drop").forEach(e=>e.remove());
-}
-function figliBlocco(target, escludiId){
-  return [...target.children].filter(c=>c.classList && c.classList.contains("blocco")
-    && !c.classList.contains("cappello") && c.dataset.bid != escludiId);
-}
-function indiceInserimento(target, y, escludiId){
-  const figli = figliBlocco(target, escludiId);
-  let i = 0;
-  for(const f of figli){
-    const r = f.getBoundingClientRect();
-    if(y > r.top + r.height/2) i++;
-  }
-  return i;
+  document.querySelectorAll(".fantasma").forEach(e=>{ if(!drag || e!==drag.ghost) e.remove(); });
 }
 function eseguiDrop(d, x, y){
   const target = bersaglioSotto(x,y,d.nodo);
-  if(!target){ // drop fuori da un blocco del programma = eliminazione
+  if(!target){ // rilascio fuori dalla tela = eliminazione del blocco trascinato
     if(!d.daPalette) rimuoviNodo(d.nodo.id);
     return;
   }
@@ -1251,7 +1280,6 @@ function eseguiDrop(d, x, y){
   } else {
     const r = trovaNodo(programma, d.nodo.id);
     if(!r) return;
-    // impedisci di trascinare un ripeti dentro se stesso
     if(target.dataset.contiene && Number(target.dataset.contiene)===d.nodo.id) return;
     r.lista.splice(r.lista.indexOf(r.b),1);
     nodo = r.b;
@@ -1571,12 +1599,6 @@ $("#btn-docente").onclick = ()=>{
 $("#btn-chiudi-docente").onclick = ()=>$("#ov-docente").classList.add("nascosto");
 $("#btn-cartina").onclick = ()=>$("#ov-cartina").classList.remove("nascosto");
 $("#btn-chiudi-cartina").onclick = ()=>$("#ov-cartina").classList.add("nascosto");
-$("#btn-audio").onclick = ()=>{
-  audioOn = !audioOn;
-  $("#btn-audio").innerHTML = "Effetti: " + (audioOn ? "s\u00ec" : "no");
-  if(audioOn){ ctxAudio(); masterA.gain.value = .55; }
-  else if(masterA){ masterA.gain.value = 0; }
-};
 $("#btn-codice").onclick = ()=>{
   const parola = $("#campo-codice").value.trim().toUpperCase().replace(/\s+/g,"");
   if(!parola) return;
