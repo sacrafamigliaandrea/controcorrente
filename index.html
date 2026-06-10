@@ -42,6 +42,7 @@ body{
 }
 button{font-family:inherit; cursor:pointer}
 .nascosto{display:none !important}
+#yt-musica{position:fixed; bottom:0; right:0; width:2px; height:2px; opacity:.01; pointer-events:none; overflow:hidden; z-index:-1}
 
 /* ---------- Header ---------- */
 header{
@@ -301,7 +302,8 @@ header .spazio{flex:1}
   </div>
   <div class="spazio"></div>
   <button class="btn-testo nascosto" id="btn-mappa-top">Mappa del fiume</button>
-  <button class="btn-testo" id="btn-audio" title="Attiva o disattiva i suoni">Audio: s&igrave;</button>
+  <button class="btn-testo" id="btn-musica" title="Musica di sottofondo">Musica: no</button>
+  <button class="btn-testo" id="btn-audio" title="Attiva o disattiva gli effetti sonori">Effetti: s&igrave;</button>
   <button class="btn-testo" id="btn-guida">Come si gioca</button>
   <button class="btn-testo" id="btn-docente">Info docente</button>
 </header>
@@ -398,6 +400,9 @@ header .spazio{flex:1}
     </div>
   </div>
 </main>
+
+<!-- Player musica di sottofondo (solo audio, YouTube IFrame API) -->
+<div id="yt-musica" aria-hidden="true"></div>
 
 <!-- Feedback -->
 <div id="feedback" role="status" aria-live="polite"></div>
@@ -1325,7 +1330,7 @@ $("#btn-docente").onclick = ()=>{
 $("#btn-chiudi-docente").onclick = ()=>$("#ov-docente").classList.add("nascosto");
 $("#btn-audio").onclick = ()=>{
   audioOn = !audioOn;
-  $("#btn-audio").innerHTML = "Audio: " + (audioOn ? "s\u00ec" : "no");
+  $("#btn-audio").innerHTML = "Effetti: " + (audioOn ? "s\u00ec" : "no");
   if(audioOn){ ctxAudio(); masterA.gain.value = .55; }
   else if(masterA){ masterA.gain.value = 0; }
 };
@@ -1350,6 +1355,50 @@ $("#logo").onclick = ()=>{
     tuttoSbloccato = true;
     feedback("Modalit\u00e0 esplorazione", "Tutti i livelli sono ora accessibili dalla mappa.", true);
     if(!$("#schermo-mappa").classList.contains("nascosto")) disegnaMappa();
+  }
+};
+
+
+/* ================= MUSICA DI SOTTOFONDO (YouTube IFrame API, solo audio) =================
+   Player nascosto, avvio solo su gesto utente, playlist in loop, volume moderato.
+   Embed sempre da youtube.com con playsinline/rel/enablejsapi (mai nocookie). */
+const MUSICA_VIDEO = "V1RPi2MYptM";
+const MUSICA_LISTA = "PLDyTZ6gpWe_XO_Zpadcti9JS6qQedo38J";
+let musicaOn = false, ytPlayer = null, ytPronto = false, ytCaricamento = false;
+function caricaAPIYouTube(){
+  if(ytCaricamento) return;
+  ytCaricamento = true;
+  window.onYouTubeIframeAPIReady = function(){
+    ytPlayer = new YT.Player("yt-musica", {
+      width:"2", height:"2", videoId: MUSICA_VIDEO,
+      playerVars:{ listType:"playlist", list:MUSICA_LISTA, loop:1,
+        playsinline:1, rel:0, enablejsapi:1, controls:0, disablekb:1 },
+      events:{
+        onReady: function(e){
+          ytPronto = true;
+          e.target.setVolume(30);
+          if(musicaOn) e.target.playVideo();
+        },
+        onError: function(){
+          musicaOn = false;
+          $("#btn-musica").innerHTML = "Musica: no";
+          feedback("Musica non disponibile", "Il brano non si pu\u00f2 riprodurre qui (rete scolastica o restrizioni del video). Il gioco funziona comunque, con i suoi effetti sonori.", false);
+        }
+      }
+    });
+  };
+  const tag = document.createElement("script");
+  tag.src = "https://www.youtube.com/iframe_api";
+  document.head.appendChild(tag);
+}
+$("#btn-musica").onclick = ()=>{
+  musicaOn = !musicaOn;
+  $("#btn-musica").innerHTML = "Musica: " + (musicaOn ? "s\u00ec" : "no");
+  if(musicaOn){
+    if(!ytPlayer) caricaAPIYouTube();
+    else if(ytPronto) ytPlayer.playVideo();
+  } else if(ytPlayer && ytPronto){
+    ytPlayer.pauseVideo();
   }
 };
 
