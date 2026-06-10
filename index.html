@@ -1,0 +1,1207 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Controcorrente — il coding di Fario</title>
+<!--
+  CONTROCORRENTE — pensiero computazionale con Fario, la trota dell'Oglio
+  Progettazione: A. Cerioli — prototipo v1
+  ------------------------------------------------------------------
+  - Single file, vanilla HTML/CSS/JS. Nessuna dipendenza salvo Google Fonts.
+  - 12 livelli in 4 tratti (Foce / Pianura / Rapide / Sorgente),
+    soluzioni verificate via simulatore Node prima del deploy.
+  - Drag & drop basato su Pointer Events (iPad-friendly) + tap-to-add.
+  - Nessun localStorage (Mac di laboratorio condivisi): progressi in memoria.
+  - Sblocco docente: 5 tap sul logo nella schermata mappa.
+  - Accesso diretto a un livello: ?livello=N
+  - Hook telemetria: funzione telemetria() vuota, pronta per Image pixel GET
+    -> Apps Script doGet(e) se servirà la dashboard docente.
+  - Errori sempre in ambra, mai rosso. L'errore e' parte del percorso.
+-->
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&display=swap" rel="stylesheet">
+<style>
+:root{
+  --verde:#1B6D3F; --verde-scuro:#13502E; --verde-chiaro:#E3EFE7; --verde-medio:#2E8B57;
+  --fiume:#2C7DA0; --fiume-scuro:#1E5F7C; --acqua:#C3E4EF; --acqua-fonda:#9CCFE0;
+  --sabbia:#F4EFE2; --carta:#F2F7F3; --ink:#1C2B22; --ink-soft:#48584F;
+  --ambra:#B45309; --ambra-bg:#FBF0DF; --oro:#D9A521;
+  --pietra:#8E979C; --pietra-scura:#646C70;
+  --raggio:14px; --ombra:0 4px 14px rgba(28,43,34,.12);
+  --f-display:'Fredoka',sans-serif; --f-body:'Atkinson Hyperlegible',sans-serif;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0}
+body{
+  font-family:var(--f-body); color:var(--ink); background:var(--carta);
+  background-image:radial-gradient(circle at 15% 10%, rgba(44,125,160,.06) 0 240px, transparent 260px),
+                   radial-gradient(circle at 85% 90%, rgba(27,109,63,.06) 0 280px, transparent 300px);
+  min-height:100vh;
+}
+button{font-family:inherit; cursor:pointer}
+.nascosto{display:none !important}
+
+/* ---------- Header ---------- */
+header{
+  display:flex; align-items:center; gap:14px; padding:14px 22px;
+  background:var(--verde); color:#fff; box-shadow:var(--ombra);
+  position:sticky; top:0; z-index:40;
+}
+header .logo{width:50px; height:50px; flex:none; cursor:pointer}
+header .logo img{width:100%; height:100%; border-radius:50%; background:#fff; object-fit:cover; display:block; box-shadow:0 0 0 2.5px rgba(255,255,255,.85)}
+header h1{font-family:var(--f-display); font-weight:700; font-size:26px; margin:0; letter-spacing:.5px}
+header .sotto{font-size:14px; opacity:.92; margin-top:1px}
+header .spazio{flex:1}
+.btn-testo{
+  background:rgba(255,255,255,.14); border:1px solid rgba(255,255,255,.45); color:#fff;
+  border-radius:999px; padding:8px 18px; font-size:15px; font-weight:700;
+}
+.btn-testo:hover{background:rgba(255,255,255,.25)}
+
+/* ---------- Schermata mappa ---------- */
+#schermo-mappa{max-width:980px; margin:0 auto; padding:26px 18px 70px}
+.hero{
+  display:flex; gap:26px; align-items:center; flex-wrap:wrap;
+  background:linear-gradient(135deg, var(--verde) 0%, var(--verde-medio) 70%, #3FA06B 100%);
+  color:#fff; border-radius:22px; padding:26px 30px; box-shadow:var(--ombra);
+  overflow:hidden; position:relative;
+}
+.hero svg.onde{position:absolute; inset:auto 0 0 0; width:100%; height:54px; opacity:.35}
+.hero .testo{flex:1 1 340px; position:relative; z-index:1}
+.hero h2{font-family:var(--f-display); font-size:34px; margin:0 0 8px; line-height:1.1}
+.hero p{margin:0; font-size:17px; line-height:1.5; max-width:52ch}
+.hero .fario-hero{width:150px; height:150px; flex:none; position:relative; z-index:1; animation:nuotata 3.2s ease-in-out infinite}
+@keyframes nuotata{0%,100%{transform:translateY(0) rotate(-3deg)}50%{transform:translateY(-10px) rotate(3deg)}}
+.hero .chip-in{
+  display:inline-block; margin-top:14px; background:rgba(255,255,255,.16);
+  border:1px solid rgba(255,255,255,.4); border-radius:999px; padding:6px 14px; font-size:13.5px;
+}
+
+.ripresa{
+  margin:18px auto 0; max-width:680px; display:flex; gap:10px; align-items:center; flex-wrap:wrap;
+  background:#fff; border:1.5px solid var(--verde-chiaro); border-radius:var(--raggio);
+  box-shadow:var(--ombra); padding:13px 16px;
+}
+.ripresa-testo{flex:1 1 240px; font-size:14.5px; line-height:1.4; color:var(--ink-soft)}
+.ripresa input{
+  flex:0 1 170px; border:1.5px solid var(--acqua-fonda); border-radius:10px; padding:10px 12px;
+  font-family:var(--f-display); font-size:16px; letter-spacing:1.5px; text-transform:uppercase; color:var(--fiume-scuro);
+}
+.ripresa input:focus{outline:2.5px solid var(--fiume); outline-offset:1px}
+.tratto-geo{padding:9px 20px; font-size:13.5px; line-height:1.45; color:var(--ink-soft); font-style:italic; border-bottom:1.5px solid #eef3ef; background:#FBFDFB}
+.codice-box{
+  margin-top:16px; background:var(--sabbia); border:1.5px dashed var(--oro); border-radius:12px;
+  padding:12px 16px; font-size:15px; line-height:1.45; text-align:center;
+}
+.codice-box .parola{font-family:var(--f-display); font-size:21px; letter-spacing:3px; color:var(--verde-scuro); display:block; margin-top:3px}
+.fiume-mappa{margin:26px auto 0; max-width:680px}
+.tratto{
+  background:#fff; border:1.5px solid var(--verde-chiaro); border-radius:var(--raggio);
+  box-shadow:var(--ombra); margin-bottom:22px; overflow:hidden;
+}
+.tratto-testa{
+  display:flex; align-items:baseline; gap:12px; padding:13px 20px;
+  background:var(--verde-chiaro); border-bottom:1.5px solid #d4e5da;
+}
+.tratto-testa h3{font-family:var(--f-display); font-size:19px; margin:0; color:var(--verde-scuro)}
+.tratto-testa .quota{font-size:13.5px; color:var(--ink-soft); font-weight:700}
+.tratto-testa .obiettivo{font-size:13.5px; color:var(--ink-soft); margin-left:auto; text-align:right}
+.livelli-fila{display:flex; gap:14px; padding:18px 20px; flex-wrap:wrap}
+.nodo{
+  flex:1 1 150px; min-width:150px; border:1.5px solid var(--acqua-fonda); border-radius:12px;
+  background:linear-gradient(180deg,#EAF6FA, #DDEFF6); padding:12px 14px; text-align:left;
+  display:flex; flex-direction:column; gap:6px; transition:transform .15s, box-shadow .15s;
+}
+.nodo:not(.bloccato):hover{transform:translateY(-3px); box-shadow:var(--ombra)}
+.nodo .num{
+  font-family:var(--f-display); font-weight:700; font-size:15px; color:#fff;
+  background:var(--fiume); border-radius:999px; padding:2px 11px; align-self:flex-start;
+}
+.nodo .nome{font-weight:700; font-size:15.5px; color:var(--ink)}
+.nodo .stelle{display:flex; gap:3px; height:18px}
+.nodo .stelle svg{width:17px; height:17px}
+.nodo.bloccato{background:#EFF1F1; border-color:#D8DCDD; cursor:default}
+.nodo.bloccato .num{background:var(--pietra)}
+.nodo.bloccato .nome{color:var(--pietra-scura)}
+.nodo .lucchetto{width:16px;height:16px}
+
+/* ---------- Schermata livello ---------- */
+#schermo-livello{max-width:1280px; margin:0 auto; padding:16px 16px 50px}
+.barra-livello{
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+  background:#fff; border:1.5px solid var(--verde-chiaro); border-radius:var(--raggio);
+  padding:10px 16px; box-shadow:var(--ombra); margin-bottom:14px;
+}
+.barra-livello .titolo-liv{font-family:var(--f-display); font-weight:700; font-size:20px; color:var(--verde-scuro)}
+.chip{
+  font-size:13px; font-weight:700; border-radius:999px; padding:5px 12px;
+  background:var(--verde-chiaro); color:var(--verde-scuro); border:1px solid #cfe2d6;
+}
+.chip.blu{background:#E2F0F6; color:var(--fiume-scuro); border-color:#c4dfeb}
+.chip.oro{background:#FBF3DC; color:#8a6a12; border-color:#ecd9a4}
+.barra-livello .spazio{flex:1}
+
+.area-gioco{display:grid; grid-template-columns:minmax(0,1fr) 390px; gap:16px; align-items:start}
+@media (max-width:980px){ .area-gioco{grid-template-columns:1fr} }
+
+.pannello{
+  background:#fff; border:1.5px solid var(--verde-chiaro); border-radius:var(--raggio);
+  box-shadow:var(--ombra); overflow:hidden;
+}
+.pannello h4{
+  font-family:var(--f-display); font-size:16px; font-weight:600; margin:0;
+  padding:10px 16px; background:var(--verde-chiaro); color:var(--verde-scuro);
+  border-bottom:1.5px solid #d4e5da; display:flex; align-items:center; gap:8px;
+}
+.pannello h4 .mini{font-family:var(--f-body); font-size:12.5px; font-weight:400; color:var(--ink-soft); margin-left:auto}
+
+#contenitore-fiume{padding:14px; display:flex; justify-content:center; background:linear-gradient(180deg,#fff, #F2F8FA)}
+#svg-fiume{max-width:100%; height:auto; touch-action:manipulation}
+
+.lato{display:flex; flex-direction:column; gap:14px}
+
+/* Blocchi */
+.palette{display:flex; flex-wrap:wrap; gap:8px; padding:12px}
+.blocco{
+  display:inline-flex; align-items:center; gap:8px; user-select:none; -webkit-user-select:none;
+  border-radius:11px; padding:9px 13px; font-weight:700; font-size:14.5px; color:#fff;
+  border:none; box-shadow:0 2px 0 rgba(0,0,0,.18); touch-action:none; position:relative;
+}
+.blocco svg{width:19px; height:19px; flex:none}
+.blocco.azione{background:var(--verde)}
+.blocco.ciclo{background:var(--fiume)}
+.blocco.cond{background:var(--ambra)}
+.blocco.in-palette{cursor:grab}
+.blocco.in-palette:active{cursor:grabbing}
+
+#lista-programma{
+  min-height:170px; max-height:46vh; overflow-y:auto; padding:12px;
+  display:flex; flex-direction:column; gap:7px; align-items:stretch;
+}
+#lista-programma .blocco{justify-content:flex-start}
+#lista-programma:empty::after, .corpo-ripeti:empty::after{
+  content:attr(data-vuoto); color:var(--pietra); font-weight:400; font-size:13.5px;
+  border:2px dashed var(--acqua-fonda); border-radius:10px; padding:14px; text-align:center; display:block;
+}
+.blocco .x{
+  margin-left:auto; width:21px; height:21px; border-radius:999px; border:none;
+  background:rgba(255,255,255,.25); color:#fff; font-weight:700; font-size:13px;
+  display:flex; align-items:center; justify-content:center; flex:none;
+}
+.blocco .x:hover{background:rgba(255,255,255,.45)}
+.blocco.ciclo:not(.in-palette){flex-direction:column; align-items:stretch; gap:7px; padding:9px 11px}
+.blocco.ciclo .testa-ripeti{display:flex; align-items:center; gap:8px}
+.contan{display:flex; align-items:center; gap:5px; margin-left:4px}
+.contan button{
+  width:24px; height:24px; border-radius:7px; border:none; background:rgba(255,255,255,.25);
+  color:#fff; font-weight:700; font-size:15px; line-height:1;
+}
+.contan button:hover{background:rgba(255,255,255,.45)}
+.contan .valore{min-width:24px; text-align:center; font-size:15px}
+.corpo-ripeti{
+  background:rgba(255,255,255,.16); border-radius:9px; padding:7px;
+  display:flex; flex-direction:column; gap:6px; min-height:42px;
+}
+.blocco.evidenzia{outline:3px solid var(--oro); outline-offset:2px}
+.fantasma{
+  position:fixed; z-index:200; pointer-events:none; opacity:.92;
+  transform:translate(-50%,-50%) rotate(-2deg) scale(1.04); box-shadow:0 10px 22px rgba(0,0,0,.3);
+}
+.indicatore-drop{height:4px; border-radius:2px; background:var(--oro); margin:1px 4px}
+.drop-attivo{outline:2.5px dashed var(--oro); outline-offset:3px; border-radius:11px}
+
+/* Controlli */
+.controlli{display:flex; gap:9px; padding:12px; flex-wrap:wrap}
+.btn{
+  border:none; border-radius:11px; padding:11px 18px; font-weight:700; font-size:15.5px;
+  font-family:var(--f-display); letter-spacing:.3px; box-shadow:0 2.5px 0 rgba(0,0,0,.2);
+  display:inline-flex; align-items:center; gap:8px;
+}
+.btn svg{width:17px; height:17px}
+.btn:active{transform:translateY(2px); box-shadow:none}
+.btn.primario{background:var(--verde); color:#fff; flex:1; justify-content:center}
+.btn.primario:hover{background:var(--verde-scuro)}
+.btn.secondario{background:#fff; color:var(--verde-scuro); border:1.5px solid var(--verde)}
+.btn.fermo{background:var(--ambra); color:#fff}
+.btn:disabled{opacity:.45; cursor:default}
+
+/* HUD */
+.hud{display:flex; gap:8px; padding:0 12px 12px; flex-wrap:wrap}
+.hud .dato{
+  display:flex; align-items:center; gap:7px; background:var(--sabbia); border-radius:10px;
+  padding:7px 12px; font-size:14px; font-weight:700; color:var(--ink-soft);
+}
+.hud .dato svg{width:17px; height:17px}
+.hud .dato.allerta{background:var(--ambra-bg); color:var(--ambra)}
+
+/* Feedback */
+#feedback{
+  position:fixed; left:50%; bottom:26px; transform:translateX(-50%) translateY(140%);
+  background:var(--ambra-bg); border:2px solid var(--ambra); color:#7c3d06;
+  border-radius:14px; padding:14px 20px; max-width:560px; width:calc(100% - 40px);
+  font-size:15.5px; line-height:1.45; box-shadow:var(--ombra); z-index:90;
+  transition:transform .3s ease; display:flex; gap:12px; align-items:flex-start;
+}
+#feedback.visibile{transform:translateX(-50%) translateY(0)}
+#feedback.ok{background:var(--verde-chiaro); border-color:var(--verde); color:var(--verde-scuro)}
+#feedback svg{width:24px; height:24px; flex:none; margin-top:1px}
+#feedback b{display:block; margin-bottom:2px}
+
+/* Overlay */
+.overlay{
+  position:fixed; inset:0; background:rgba(19,46,31,.55); z-index:100;
+  display:flex; align-items:center; justify-content:center; padding:18px;
+}
+.scheda{
+  background:#fff; border-radius:20px; max-width:520px; width:100%;
+  box-shadow:0 18px 48px rgba(0,0,0,.3); overflow:hidden; max-height:92vh; overflow-y:auto;
+}
+.scheda .testa{
+  background:linear-gradient(135deg, var(--verde), var(--verde-medio)); color:#fff;
+  padding:22px 26px; text-align:center;
+}
+.scheda .testa h3{font-family:var(--f-display); font-size:27px; margin:0}
+.scheda .corpo{padding:22px 26px}
+.stelle-grandi{display:flex; justify-content:center; gap:14px; margin:6px 0 4px}
+.stelle-grandi svg{width:54px; height:54px}
+.stelle-grandi .s{transform:scale(0); animation:pop .45s forwards}
+.stelle-grandi .s:nth-child(2){animation-delay:.18s}
+.stelle-grandi .s:nth-child(3){animation-delay:.36s}
+@keyframes pop{70%{transform:scale(1.25)}100%{transform:scale(1)}}
+.criteri{list-style:none; margin:14px 0 0; padding:0; display:flex; flex-direction:column; gap:9px}
+.criteri li{display:flex; gap:10px; align-items:center; font-size:15.5px}
+.criteri li svg{width:21px; height:21px; flex:none}
+.criteri li.no{color:var(--ink-soft)}
+.scheda .azioni{display:flex; gap:10px; padding:0 26px 24px; flex-wrap:wrap}
+.scheda .azioni .btn{flex:1; justify-content:center}
+.guida-blocchi{display:flex; flex-direction:column; gap:11px; margin-top:14px}
+.guida-blocchi .riga{display:flex; gap:12px; align-items:center; font-size:14.5px}
+.guida-blocchi .riga .blocco{pointer-events:none; flex:none}
+
+@media (prefers-reduced-motion: reduce){
+  *{animation:none !important; transition:none !important}
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo" id="logo" title="Scuola Sacra Famiglia">
+    <img src="data:image/jpeg;base64,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" alt="Logo Scuola Sacra Famiglia">
+  </div>
+  <div>
+    <h1>Controcorrente</h1>
+    <div class="sotto">Scuola Sacra Famiglia &middot; Orzinuovi (BS) &mdash; risali il fiume con Fario</div>
+  </div>
+  <div class="spazio"></div>
+  <button class="btn-testo nascosto" id="btn-mappa-top">Mappa del fiume</button>
+  <button class="btn-testo" id="btn-audio" title="Attiva o disattiva i suoni">Audio: s&igrave;</button>
+  <button class="btn-testo" id="btn-guida">Come si gioca</button>
+</header>
+
+<!-- ============ MAPPA ============ -->
+<main id="schermo-mappa">
+  <section class="hero">
+    <div class="testo">
+      <h2>Da Orzinuovi a Ponte di Legno, controcorrente</h2>
+      <p>Fario &egrave; una giovane trota fario e deve risalire <b>il nostro fiume</b>: l&rsquo;Oglio.
+      Parte da Orzinuovi, attraversa il Lago d&rsquo;Iseo dove la aspettano due amiche, risale la Valle Camonica
+      e arriva fin lass&ugrave;, a Ponte di Legno, dove l&rsquo;Oglio nasce dall&rsquo;incontro di due torrenti:
+      il Frigidolfo e il Narcanello. La corrente &egrave; forte: l&rsquo;unico modo per farcela &egrave; <b>programmare</b> ogni mossa con i blocchi.</p>
+      <span class="chip-in">Pensiero computazionale + Geografia &middot; Indicazioni Nazionali 2025 &middot; STEM</span>
+    </div>
+    <div class="fario-hero">
+      <svg viewBox="0 0 120 120" aria-hidden="true">
+        <g transform="translate(60 62) rotate(-28)">
+          <path d="M0 -36 C 19 -20, 19 18, 0 34 C -19 18, -19 -20, 0 -36 Z" fill="#F4EFE2"/>
+          <path d="M0 -36 C 19 -20, 19 18, 0 34 C -19 18, -19 -20, 0 -36 Z" fill="none" stroke="#13502E" stroke-width="2.5"/>
+          <path d="M0 34 L 13 50 L 0 43 L -13 50 Z" fill="#F4EFE2" stroke="#13502E" stroke-width="2.5" stroke-linejoin="round"/>
+          <path d="M-15 -2 C -24 2, -24 10, -16 12" fill="none" stroke="#13502E" stroke-width="2.5"/>
+          <path d="M15 -2 C 24 2, 24 10, 16 12" fill="none" stroke="#13502E" stroke-width="2.5"/>
+          <circle cx="-6" cy="-20" r="3" fill="#1C2B22"/>
+          <circle cx="6" cy="-20" r="3" fill="#1C2B22"/>
+          <circle cx="-5" cy="-4" r="3" fill="#D9A521"/>
+          <circle cx="6" cy="4" r="3" fill="#D9A521"/>
+          <circle cx="-4" cy="14" r="3" fill="#D9A521"/>
+          <circle cx="5" cy="20" r="2.4" fill="#1B6D3F"/>
+        </g>
+      </svg>
+    </div>
+    <svg class="onde" viewBox="0 0 600 40" preserveAspectRatio="none" aria-hidden="true">
+      <path d="M0 25 Q 30 10, 60 25 T 120 25 T 180 25 T 240 25 T 300 25 T 360 25 T 420 25 T 480 25 T 540 25 T 600 25 V40 H0 Z" fill="#fff"/>
+    </svg>
+  </section>
+
+  <div class="ripresa">
+    <div class="ripresa-testo"><b>Hai un codice di risalita?</b> Scrivilo qui e riprendi il viaggio da dove l&rsquo;avevi lasciato.</div>
+    <input id="campo-codice" type="text" inputmode="text" autocomplete="off" autocapitalize="characters" placeholder="es. SARNICO" maxlength="14">
+    <button class="btn primario" id="btn-codice">Riprendi</button>
+  </div>
+
+  <div class="fiume-mappa" id="fiume-mappa"></div>
+</main>
+
+<!-- ============ LIVELLO ============ -->
+<main id="schermo-livello" class="nascosto">
+  <div class="barra-livello">
+    <span class="titolo-liv" id="liv-titolo"></span>
+    <span class="chip" id="liv-tratto"></span>
+    <span class="chip blu" id="liv-obiettivo"></span>
+    <span class="spazio"></span>
+    <span class="chip oro" id="liv-par"></span>
+  </div>
+
+  <div class="area-gioco">
+    <div class="pannello">
+      <h4>Il fiume <span class="mini" id="mini-istruzione">Porta Fario alla sorgente</span></h4>
+      <div id="contenitore-fiume"></div>
+      <div class="hud">
+        <span class="dato" id="hud-larve"></span>
+        <span class="dato" id="hud-blocchi"></span>
+      </div>
+    </div>
+
+    <div class="lato">
+      <div class="pannello">
+        <h4>Blocchi <span class="mini">tocca o trascina nel programma</span></h4>
+        <div class="palette" id="palette"></div>
+      </div>
+      <div class="pannello">
+        <h4>Programma di Fario <span class="mini" id="mini-conteggio"></span></h4>
+        <div id="lista-programma" data-vuoto="Trascina qui i blocchi: si eseguono dall&rsquo;alto verso il basso"></div>
+        <div class="controlli">
+          <button class="btn primario" id="btn-esegui">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4.5v15l13-7.5z"/></svg>
+            Esegui
+          </button>
+          <button class="btn fermo nascosto" id="btn-stop">
+            <svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="6" width="12" height="12" rx="2"/></svg>
+            Stop
+          </button>
+          <button class="btn secondario" id="btn-riparti" title="Riporta Fario alla partenza">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M4 10a8 8 0 1 1 2 6"/><path d="M4 4v6h6"/></svg>
+            Riparti
+          </button>
+          <button class="btn secondario" id="btn-svuota" title="Cancella tutti i blocchi">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M5 7h14M10 7V5h4v2m-7 0 1 12h8l1-12"/></svg>
+            Svuota
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- Feedback -->
+<div id="feedback" role="status" aria-live="polite"></div>
+
+<!-- Overlay vittoria -->
+<div class="overlay nascosto" id="ov-vittoria">
+  <div class="scheda">
+    <div class="testa">
+      <h3 id="vit-titolo">Sorgente raggiunta!</h3>
+    </div>
+    <div class="corpo">
+      <div class="stelle-grandi" id="vit-stelle"></div>
+      <ul class="criteri" id="vit-criteri"></ul>
+    </div>
+    <div class="azioni">
+      <button class="btn secondario" id="btn-rigioca">Rigioca</button>
+      <button class="btn secondario" id="btn-vai-mappa">Mappa</button>
+      <button class="btn primario" id="btn-prossimo">Livello successivo</button>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay guida -->
+<div class="overlay nascosto" id="ov-guida">
+  <div class="scheda">
+    <div class="testa"><h3>Come si gioca</h3></div>
+    <div class="corpo">
+      <p style="margin-top:0; line-height:1.55">Fario esegue <b>esattamente</b> quello che scrivi nel programma, blocco dopo blocco,
+      dall&rsquo;alto verso il basso. Tocca un blocco per aggiungerlo, trascinalo per spostarlo,
+      usa la <b>&times;</b> per toglierlo. Se qualcosa va storto, nessun problema: osserva dove si ferma Fario,
+      correggi e riprova. Sbagliare fa parte del viaggio.</p>
+      <div class="guida-blocchi" id="guida-blocchi"></div>
+    </div>
+    <div class="azioni">
+      <button class="btn primario" id="btn-chiudi-guida">Ho capito, si parte</button>
+    </div>
+  </div>
+</div>
+
+<script>
+"use strict";
+
+/* ================= DATI LIVELLI (verificati con simulatore) =================
+   Legenda mappa: # roccia, . acqua, S partenza, T sorgente, o larva, W cascata */
+
+const TRATTI = [
+  { nome:"Pianura dell\u2019Oglio", quota:"88 m", localita:"Orzinuovi \u2192 Sarnico",
+    obiettivo:"Sequenze: leggere ed eseguire algoritmi",
+    geo:"L\u2019Oglio scorre proprio accanto a Orzinuovi e segna il confine tra le province di Brescia e Cremona. Fario parte da casa nostra." },
+  { nome:"Lago d\u2019Iseo (Sebino)", quota:"185 m", localita:"Sarnico \u2192 Costa Volpino",
+    obiettivo:"Cicli: riconoscere regolarit\u00e0 e pattern",
+    geo:"Fario entra nel lago a Sarnico e ne esce a Costa Volpino, dove l\u2019Oglio arriva dalla valle. In mezzo saluta Montisola, la pi\u00f9 grande isola lacustre d\u2019Italia, e due amiche speciali." },
+  { nome:"Valle Camonica", quota:"200 \u2192 700 m", localita:"Costa Volpino \u2192 Edolo",
+    obiettivo:"Istruzioni speciali e condizioni",
+    geo:"Il fiume si fa stretto e veloce tra le montagne camune. A Capo di Ponte, sulle rocce, ci sono incisioni di 10.000 anni fa: anche quelle sono istruzioni lasciate da qualcuno." },
+  { nome:"Ponte di Legno", quota:"1258 m", localita:"Edolo \u2192 Ponte di Legno",
+    obiettivo:"Pattern complessi e ottimizzazione",
+    geo:"Qui finisce la risalita: l\u2019Oglio nasce a Ponte di Legno dalla confluenza di due torrenti, il Frigidolfo e il Narcanello." },
+];
+
+/* Codici di risalita: toponimi del viaggio. Superato il livello N, il codice
+   riporta lo studente fin l\u00ec anche dopo la chiusura del browser. */
+const CODICI = { 1:"OGLIO", 2:"ROGGIA", 3:"SARNICO", 4:"MONTISOLA", 5:"LOVERE", 6:"COSTAVOLPINO",
+  7:"BOARIO", 8:"CAPODIPONTE", 9:"EDOLO", 10:"PEZZO", 11:"FRIGIDOLFO", 12:"NARCANELLO" };
+
+const AMICHE = {
+  lacustre:{ nome:"Trota Lacustre", corpo:"#DCE9F2", bordo:"#1E5F7C", macchie:"#2C7DA0", banda:null },
+  iridea:{ nome:"Trota Iridea", corpo:"#F2E8EE", bordo:"#5C6470", macchie:"#6C7479", banda:"#C97B96" },
+};
+
+const LIVELLI = [
+  { id:1, tratto:0, nome:"Si parte da Orzinuovi", dir:"up", par:4, max:14,
+    blocchi:["nuota"],
+    aiuto:"Conta le caselle che separano Fario dalla sorgente.",
+    rows:["#######","###T###","###.###","###o###","###.###","###S###"] },
+  { id:2, tratto:0, nome:"La prima ansa", dir:"up", par:6, max:14,
+    blocchi:["nuota","giraS","giraD"],
+    aiuto:"GIRA fa solo ruotare Fario sul posto: per muoverti serve sempre NUOTA.",
+    rows:["#######","###..T#","###.###","###o###","###S###"] },
+  { id:3, tratto:0, nome:"Zig e zag tra le rogge", dir:"right", par:11, max:14,
+    blocchi:["nuota","giraS","giraD"],
+    aiuto:"Tante istruzioni quasi uguali, una dopo l\u2019altra\u2026 non ci sar\u00e0 un modo pi\u00f9 furbo? Lo scoprirai nel prossimo tratto.",
+    rows:["#######","#####T#","#####.#","###..o#","###.###","#So.###","#######"] },
+  { id:4, tratto:1, nome:"La traversata del lago", dir:"up", par:2, max:3,
+    blocchi:["nuota","ripeti"],
+    aiuto:"Hai solo 3 blocchi nello zaino: lascia che sia RIPETI a fare il lavoro pesante.",
+    rows:["###T###","###.###","###.###","##.o###","###.###","###.###","###S###"],
+    amiche:[{tipo:"lacustre", pos:[2,3], frase:"Ciao Fario! Io vivo qui nel Sebino tutto l\u2019anno. Il lago \u00e8 lungo da attraversare a bracciate: lascia che sia RIPETI a contarle per te."}] },
+  { id:5, tratto:1, nome:"Le sponde di Montisola", dir:"up", par:5, max:6,
+    blocchi:["nuota","giraS","giraD","ripeti"],
+    aiuto:"Osserva la scalinata: quale sequenza di mosse si ripete a ogni gradino?",
+    rows:["#######","#######","#######","###.T##","#.o.###","#..####","#S#####"],
+    amiche:[{tipo:"iridea", pos:[1,4], frase:"Piacere, Iridea! La mia famiglia arriva dal Nord America: ci hanno portate qui le persone, tanto tempo fa. Osserva le sponde a gradini: la stessa mossa si ripete sempre uguale."}] },
+  { id:6, tratto:1, nome:"Banchetto sul Sebino", dir:"up", par:6, max:8,
+    blocchi:["nuota","giraS","giraD","ripeti"],
+    aiuto:"Le larve disegnano il percorso: trova il motivo che si ripete e raccoglile tutte.",
+    rows:["#######","#######","##oT.##","##o####","#oo####","#o.####","#S#####"],
+    amiche:[{tipo:"lacustre", pos:[4,2], frase:"Le larve migliori di tutto il lago sono qui! Guardale bene: disegnano un motivo che si ripete."},
+            {tipo:"iridea", pos:[2,5], frase:"Raccoglile tutte, Fario: ti serviranno le forze per la Valle Camonica!"}] },
+  { id:7, tratto:2, nome:"La prima cascata camuna", dir:"up", par:3, max:14,
+    blocchi:["nuota","salta"],
+    aiuto:"Nelle rapide non si nuota: il blocco SALTA scavalca la cascata e atterra subito dopo.",
+    rows:["#######","###T###","###.###","###W###","###o###","###S###","#######"] },
+  { id:8, tratto:2, nome:"La forra dell\u2019Oglio", dir:"up", par:3, max:5,
+    blocchi:["nuota","giraD","ripeti","seRD"],
+    aiuto:"Il canyon gira sempre dalla stessa parte. E se Fario controllasse la roccia davanti a ogni bracciata?",
+    rows:["#######","#o...o#","#.###.#","#.###T#","#.#####","#S#####","#######"] },
+  { id:9, tratto:2, nome:"Le rapide di Edolo", dir:"up", par:7, max:9,
+    blocchi:["nuota","giraS","giraD","salta"],
+    aiuto:"Due cascate e una curva: pianifica il percorso prima di premere Esegui.",
+    rows:["#######","#..WoT#","#.#####","#o#####","#W#####","#S#####","#######"] },
+  { id:10, tratto:3, nome:"Lo zigzag del Pezzo", dir:"up", par:5, max:5,
+    blocchi:["nuota","giraS","giraD","ripeti"],
+    aiuto:"Cinque blocchi, non uno di pi\u00f9. Il pattern della scalinata ti torner\u00e0 utile.",
+    rows:["########","#####.T#","####o.##","###..###","##o.####","#..#####","#S######","########"] },
+  { id:11, tratto:3, nome:"Le tre rapide del Frigidolfo", dir:"up", par:3, max:4,
+    blocchi:["nuota","salta","ripeti"],
+    aiuto:"Tre cascate in fila: anche SALTA pu\u00f2 stare dentro un RIPETI.",
+    rows:["##T##","##o##","##W##","##o##","##W##","##o##","##W##","##S##"] },
+  { id:12, tratto:3, nome:"La confluenza", dir:"up", par:4, max:6,
+    blocchi:["nuota","giraD","ripeti","seRD","seWS"],
+    aiuto:"L\u2019ultimo tratto ha curve E cascate. Un solo ciclo, con i controlli giusti dentro, basta per tutto il fiume.",
+    rows:["#########","#o..W.o.#","#.#####.#","#.#####T#","#.#######","#o#######","#W#######","#S#######","#########"] },
+];
+
+/* ================= DEFINIZIONE BLOCCHI ================= */
+const ICONE = {
+  nuota:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V6"/><path d="M6 11l6-6 6 6"/></svg>',
+  giraS:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H5v4"/><path d="M5 5l5 5a6 6 0 1 1-1.5 6"/></svg>',
+  giraD:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5h4v4"/><path d="M19 5l-5 5a6 6 0 1 0 1.5 6"/></svg>',
+  salta:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M4 17c2-8 14-8 16 0"/><path d="M17 14l3 3 3-3" transform="translate(-3 0)"/></svg>',
+  ripeti:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M17 2l4 4-4 4"/><path d="M3 11v-1a4 4 0 0 1 4-4h14"/><path d="M7 22l-4-4 4-4"/><path d="M21 13v1a4 4 0 0 1-4 4H3"/></svg>',
+  seRD:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 16l3-7 4 3 3-5 4 9z"/><path d="M14 20h6m-2.5-2.5L20 20l-2.5 2.5"/></svg>',
+  seWS:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 14c2-5 4-5 4 0s2 5 4 0 2-5 4 0 2 5 4 0"/><path d="M6 20c3-4 9-4 12 0"/></svg>',
+};
+const BLOCCHI = {
+  nuota:{ tipo:"azione", testo:"NUOTA" },
+  giraS:{ tipo:"azione", testo:"GIRA A SINISTRA" },
+  giraD:{ tipo:"azione", testo:"GIRA A DESTRA" },
+  salta:{ tipo:"azione", testo:"SALTA LA CASCATA" },
+  ripeti:{ tipo:"ciclo", testo:"RIPETI" },
+  seRD:{ tipo:"cond", testo:"SE ROCCIA \u2192 GIRA A DESTRA" },
+  seWS:{ tipo:"cond", testo:"SE CASCATA \u2192 SALTA" },
+};
+const SPIEGAZIONI = {
+  nuota:"Fario avanza di una casella nella direzione del muso.",
+  giraS:"Fario ruota di un quarto di giro a sinistra, senza muoversi.",
+  giraD:"Fario ruota di un quarto di giro a destra, senza muoversi.",
+  salta:"Se davanti c\u2019\u00e8 una cascata, Fario la scavalca e atterra subito dopo.",
+  ripeti:"Esegue i blocchi al suo interno per il numero di volte indicato.",
+  seRD:"Solo se davanti c\u2019\u00e8 una roccia, Fario gira a destra.",
+  seWS:"Solo se davanti c\u2019\u00e8 una cascata, Fario la salta.",
+};
+
+
+/* ================= AUDIO (Web Audio API, suoni sintetizzati: nessun file esterno) ================= */
+let audioOn = true, ctxA = null, masterA = null, bufRumore = null;
+function ctxAudio(){
+  if(!ctxA){
+    ctxA = new (window.AudioContext || window.webkitAudioContext)();
+    masterA = ctxA.createGain(); masterA.gain.value = .55; masterA.connect(ctxA.destination);
+    bufRumore = creaRumore(2);
+    avviaAmbienteFiume();
+  }
+  if(ctxA.state === "suspended") ctxA.resume();
+  return ctxA;
+}
+function creaRumore(sec){
+  const c = ctxA, b = c.createBuffer(1, c.sampleRate*sec, c.sampleRate);
+  const d = b.getChannelData(0);
+  let v = 0;
+  for(let i=0;i<d.length;i++){ const w = Math.random()*2-1; v = (v + .025*w)/1.025; d[i] = v*3.2; } // rumore "marrone": acqua
+  return b;
+}
+function avviaAmbienteFiume(){ // mormorio continuo del fiume, molto basso
+  const c = ctxA;
+  const src = c.createBufferSource(); src.buffer = bufRumore; src.loop = true;
+  const f = c.createBiquadFilter(); f.type = "lowpass"; f.frequency.value = 640; f.Q.value = .6;
+  const g = c.createGain(); g.gain.value = .05;
+  const lfo = c.createOscillator(); lfo.frequency.value = .16;
+  const lg = c.createGain(); lg.gain.value = 170;
+  lfo.connect(lg); lg.connect(f.frequency);
+  src.connect(f); f.connect(g); g.connect(masterA);
+  src.start(); lfo.start();
+}
+function nota(tipo, f0, f1, dur, vol, t0){
+  const c = ctxAudio(), t = c.currentTime + (t0||0);
+  const o = c.createOscillator(), g = c.createGain();
+  o.type = tipo; o.frequency.setValueAtTime(f0, t);
+  if(f1) o.frequency.exponentialRampToValueAtTime(f1, t+dur);
+  g.gain.setValueAtTime(.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t+.015);
+  g.gain.exponentialRampToValueAtTime(.0001, t+dur);
+  o.connect(g); g.connect(masterA); o.start(t); o.stop(t+dur+.05);
+}
+function sbuffo(dur, vol, freq, t0){ // soffio d'acqua filtrato
+  const c = ctxAudio(), t = c.currentTime + (t0||0);
+  const s = c.createBufferSource(); s.buffer = bufRumore;
+  const f = c.createBiquadFilter(); f.type = "bandpass"; f.Q.value = .9;
+  f.frequency.setValueAtTime(freq, t);
+  f.frequency.exponentialRampToValueAtTime(freq*.45, t+dur);
+  const g = c.createGain();
+  g.gain.setValueAtTime(.0001, t);
+  g.gain.exponentialRampToValueAtTime(vol, t+.02);
+  g.gain.exponentialRampToValueAtTime(.0001, t+dur);
+  s.connect(f); f.connect(g); g.connect(masterA); s.start(t); s.stop(t+dur+.05);
+}
+const sfx = {
+  pronto(){ try{ if(audioOn) ctxAudio(); }catch(e){} },
+  bloop(){ if(!audioOn) return; try{ nota("sine", 400, 175, .14, .16); sbuffo(.12, .1, 1300, 0); }catch(e){} },
+  tick(){ if(!audioOn) return; try{ nota("triangle", 590, 470, .07, .1); }catch(e){} },
+  splash(){ if(!audioOn) return; try{ nota("sine", 240, 560, .16, .14); sbuffo(.34, .2, 2100, .05); }catch(e){} },
+  gnam(){ if(!audioOn) return; try{ nota("sine", 740, null, .08, .14); nota("sine", 1020, null, .1, .14, .07); }catch(e){} },
+  pop(){ if(!audioOn) return; try{ nota("sine", 330, 480, .07, .1); }catch(e){} },
+  urto(){ if(!audioOn) return; try{ nota("sine", 130, 70, .22, .22); sbuffo(.16, .12, 420, 0); }catch(e){} },
+  vittoria(){ if(!audioOn) return; try{
+    [523, 659, 784, 1047].forEach((f,i)=>nota("triangle", f, null, .2, .16, i*.13));
+    [1500, 2200, 1800].forEach((f,i)=>sbuffo(.14, .08, f, .55 + i*.1)); // bollicine finali
+  }catch(e){} },
+};
+document.addEventListener("pointerdown", ()=>sfx.pronto(), true); // sblocco iOS al primo tocco
+
+/* ================= STATO ================= */
+const DIRS = { up:[0,-1], right:[1,0], down:[0,1], left:[-1,0] };
+const ANGOLI = { up:0, right:90, down:180, left:270 };
+const DESTRA_DI = { up:"right", right:"down", down:"left", left:"up" };
+const SINISTRA_DI = { up:"left", left:"down", down:"right", right:"up" };
+const CELLA = 64;
+
+let progresso = {};        // {id:{stelle:n}} - solo in memoria (Mac condivisi)
+let tuttoSbloccato = false;
+let tapLogo = 0;
+
+let liv = null;            // livello corrente (oggetto LIVELLI)
+let mondo = null;          // {grid, larve(Set), start, goal}
+let pesce = null;          // {x,y,dir, mangiate(Set)}
+let programma = [];        // [{id,type,n,body[]}]
+let prossimoId = 1;
+let inEsecuzione = false;
+let stopRichiesto = false;
+
+function telemetria(evento, dettagli){ /* hook: Image pixel GET -> Apps Script */ }
+
+/* ================= UTILITA' ================= */
+const $ = s => document.querySelector(s);
+function el(tag, cls, html){ const e=document.createElement(tag); if(cls) e.className=cls; if(html!=null) e.innerHTML=html; return e; }
+function contaBlocchi(lista){ let n=0; for(const b of lista){ n++; if(b.type==="ripeti") n+=contaBlocchi(b.body); } return n; }
+function trovaNodo(lista, id){
+  for(const b of lista){ if(b.id===id) return {lista, b};
+    if(b.type==="ripeti"){ const r=trovaNodo(b.body, id); if(r) return r; } }
+  return null;
+}
+
+/* ================= PARSING MAPPA ================= */
+function leggiMappa(L){
+  let start=null, goal=null, larve=new Set(), grid=[];
+  L.rows.forEach((r,y)=>{
+    grid.push(r.split(""));
+    r.split("").forEach((c,x)=>{
+      if(c==="S"){ start=[x,y]; grid[y][x]="."; }
+      if(c==="T"){ goal=[x,y]; grid[y][x]="."; }
+      if(c==="o"){ larve.add(x+","+y); grid[y][x]="."; }
+    });
+  });
+  return {grid, start, goal, larve};
+}
+function cella(x,y){
+  const g=mondo.grid;
+  if(y<0||y>=g.length||x<0||x>=g[y].length) return "#";
+  return g[y][x];
+}
+
+/* ================= RENDER FIUME (SVG) ================= */
+function disegnaFiume(){
+  const cols = mondo.grid[0].length, rows = mondo.grid.length;
+  const W = cols*CELLA, H = rows*CELLA;
+  let s = '<svg id="svg-fiume" viewBox="0 0 '+W+' '+H+'" width="'+Math.min(W,560)+'" role="img" aria-label="Mappa del fiume">';
+  s += '<defs>'
+    +  '<pattern id="incr" width="22" height="14" patternUnits="userSpaceOnUse">'
+    +  '<path d="M0 8 Q 5.5 3, 11 8 T 22 8" fill="none" stroke="#9CCFE0" stroke-width="1.6" opacity=".55"/></pattern>'
+    +  '<radialGradient id="sorg"><stop offset="0%" stop-color="#FFFFFF"/><stop offset="55%" stop-color="#CFEAD9"/><stop offset="100%" stop-color="#9CCFE0"/></radialGradient>'
+    +  '</defs>';
+  for(let y=0;y<rows;y++) for(let x=0;x<cols;x++){
+    const c = mondo.grid[y][x], px=x*CELLA, py=y*CELLA;
+    if(c==="#"){
+      s += '<rect x="'+px+'" y="'+py+'" width="'+CELLA+'" height="'+CELLA+'" fill="#DCE3DC"/>';
+      s += '<ellipse cx="'+(px+CELLA*0.5)+'" cy="'+(py+CELLA*0.52)+'" rx="24" ry="19" fill="#8E979C"/>'
+        +  '<ellipse cx="'+(px+CELLA*0.42)+'" cy="'+(py+CELLA*0.44)+'" rx="11" ry="8" fill="#A7AFB3"/>';
+    } else {
+      s += '<rect x="'+px+'" y="'+py+'" width="'+CELLA+'" height="'+CELLA+'" fill="#C3E4EF"/>'
+        +  '<rect x="'+px+'" y="'+py+'" width="'+CELLA+'" height="'+CELLA+'" fill="url(#incr)"/>';
+      if(c==="W"){
+        s += '<rect x="'+px+'" y="'+py+'" width="'+CELLA+'" height="'+CELLA+'" fill="#7FB8CF"/>';
+        for(let i=0;i<4;i++){
+          s += '<rect x="'+(px+7+i*14)+'" y="'+(py+5)+'" width="6" height="'+(CELLA-10)+'" rx="3" fill="#fff" opacity=".8"/>';
+        }
+      }
+    }
+    s += '<rect x="'+px+'" y="'+py+'" width="'+CELLA+'" height="'+CELLA+'" fill="none" stroke="#fff" stroke-opacity=".35"/>';
+  }
+  // sorgente
+  const [gx,gy]=mondo.goal;
+  s += '<circle cx="'+(gx*CELLA+32)+'" cy="'+(gy*CELLA+32)+'" r="24" fill="url(#sorg)"/>'
+    +  '<circle cx="'+(gx*CELLA+24)+'" cy="'+(gy*CELLA+26)+'" r="3.5" fill="#fff"/>'
+    +  '<circle cx="'+(gx*CELLA+40)+'" cy="'+(gy*CELLA+36)+'" r="2.6" fill="#fff"/>'
+    +  '<circle cx="'+(gx*CELLA+33)+'" cy="'+(gy*CELLA+20)+'" r="2" fill="#fff"/>';
+  // larve
+  mondo.larve.forEach(k=>{
+    const [x,y]=k.split(",").map(Number);
+    s += '<g class="larva" data-larva="'+k+'" transform="translate('+(x*CELLA+32)+' '+(y*CELLA+32)+')">'
+      +  '<ellipse cx="0" cy="0" rx="9" ry="6" fill="#D9A521"/>'
+      +  '<circle cx="-7" cy="0" r="4.5" fill="#B45309"/>'
+      +  '<circle cx="-8.5" cy="-1.5" r="1.1" fill="#1C2B22"/>'
+      +  '<path d="M5 -4 q4 -3 6 -1 M5 4 q4 3 6 1" fill="none" stroke="#B45309" stroke-width="1.6" stroke-linecap="round"/></g>';
+  });
+  // amiche del lago
+  if(liv.amiche) liv.amiche.forEach((a,i)=>{
+    const A = AMICHE[a.tipo], px = a.pos[0]*CELLA+32, py = a.pos[1]*CELLA+32;
+    s += '<g class="amica" data-amica="'+i+'" style="cursor:pointer" transform="translate('+px+' '+py+') rotate('+(i%2? -24 : 18)+') scale(.82)">'
+      +  '<path d="M0 -22 C 11 -12, 11 11, 0 20 C -11 11, -11 -12, 0 -22 Z" fill="'+A.corpo+'" stroke="'+A.bordo+'" stroke-width="2.4"/>'
+      +  '<path d="M0 20 L 8 30 L 0 26 L -8 30 Z" fill="'+A.corpo+'" stroke="'+A.bordo+'" stroke-width="2.4" stroke-linejoin="round"/>'
+      +  (A.banda ? '<path d="M0 -18 C 5 -6, 5 8, 0 17" fill="none" stroke="'+A.banda+'" stroke-width="4.5" stroke-linecap="round" opacity=".8"/>' : '')
+      +  '<circle cx="-3.6" cy="-12" r="2" fill="#1C2B22"/><circle cx="3.6" cy="-12" r="2" fill="#1C2B22"/>'
+      +  '<circle cx="-3" cy="0" r="1.8" fill="'+A.macchie+'"/><circle cx="3.4" cy="6" r="1.8" fill="'+A.macchie+'"/>'
+      +  '</g>';
+  });
+  // Fario
+  s += '<g id="fario" style="transition:transform .28s ease">'
+    +  '<path d="M0 -22 C 11 -12, 11 11, 0 20 C -11 11, -11 -12, 0 -22 Z" fill="#F4EFE2" stroke="#13502E" stroke-width="2.4"/>'
+    +  '<path d="M0 20 L 8 30 L 0 26 L -8 30 Z" fill="#F4EFE2" stroke="#13502E" stroke-width="2.4" stroke-linejoin="round"/>'
+    +  '<path d="M-9 -1 C -15 2, -15 7, -10 8" fill="none" stroke="#13502E" stroke-width="2.2"/>'
+    +  '<path d="M9 -1 C 15 2, 15 7, 10 8" fill="none" stroke="#13502E" stroke-width="2.2"/>'
+    +  '<circle cx="-3.6" cy="-12" r="2" fill="#1C2B22"/><circle cx="3.6" cy="-12" r="2" fill="#1C2B22"/>'
+    +  '<circle cx="-3" cy="-2" r="2" fill="#D9A521"/><circle cx="3.6" cy="3" r="2" fill="#D9A521"/>'
+    +  '<circle cx="-2.6" cy="9" r="2" fill="#D9A521"/><circle cx="3" cy="12" r="1.6" fill="#1B6D3F"/>'
+    +  '</g>';
+  s += '</svg>';
+  $("#contenitore-fiume").innerHTML = s;
+  document.querySelectorAll(".amica").forEach(e=>{
+    e.addEventListener("pointerdown", ev=>{
+      ev.stopPropagation();
+      const a = liv.amiche[Number(e.dataset.amica)];
+      sfx.gnam();
+      feedback(AMICHE[a.tipo].nome, a.frase, true);
+    });
+  });
+  posizionaFario(false);
+}
+function posizionaFario(anima){
+  const f = $("#fario");
+  if(!anima) f.style.transition = "none";
+  f.style.transform = "translate("+(pesce.x*CELLA+32)+"px,"+(pesce.y*CELLA+32)+"px) rotate("+pesce.angolo+"deg)";
+  if(!anima){ void f.getBoundingClientRect(); f.style.transition = "transform .28s ease"; }
+}
+function scuotiFario(){
+  const f=$("#fario");
+  f.animate([{transform:f.style.transform+" scale(1)"},{transform:f.style.transform+" scale(1.12) rotate(6deg)"},{transform:f.style.transform+" scale(1)"}],{duration:340});
+}
+
+/* ================= HUD / FEEDBACK ================= */
+function aggiornaHUD(){
+  const tot = mondo.larve.size, prese = pesce.mangiate.size;
+  $("#hud-larve").innerHTML = ICONE_HUD.larva + " Larve "+prese+"/"+tot;
+  const n = contaBlocchi(programma);
+  const sup = n > liv.max;
+  $("#hud-blocchi").innerHTML = ICONE_HUD.zaino + " Blocchi "+n+"/"+liv.max;
+  $("#hud-blocchi").classList.toggle("allerta", sup);
+  $("#mini-conteggio").textContent = n + (n===1 ? " blocco" : " blocchi");
+  $("#btn-esegui").disabled = inEsecuzione || n===0 || sup;
+}
+const ICONE_HUD = {
+  larva:'<svg viewBox="0 0 24 24"><ellipse cx="13" cy="12" rx="8" ry="5.4" fill="#D9A521"/><circle cx="6" cy="12" r="4" fill="#B45309"/><circle cx="4.8" cy="10.8" r="1" fill="#1C2B22"/></svg>',
+  zaino:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect x="5" y="7" width="14" height="13" rx="3"/><path d="M9 7V5a3 3 0 0 1 6 0v2"/></svg>',
+};
+let timerFeedback = null;
+function feedback(titolo, testo, ok){
+  const f = $("#feedback");
+  f.classList.toggle("ok", !!ok);
+  f.innerHTML = (ok
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="#1B6D3F" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="#B45309" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M12 7.5v5.5"/><circle cx="12" cy="16.5" r=".4" fill="#B45309"/></svg>')
+    + "<div><b>"+titolo+"</b>"+testo+"</div>";
+  f.classList.add("visibile");
+  clearTimeout(timerFeedback);
+  timerFeedback = setTimeout(()=>f.classList.remove("visibile"), 6500);
+}
+
+/* ================= COSTRUZIONE BLOCCHI UI ================= */
+function nuovoNodo(type){
+  const n = { id:prossimoId++, type };
+  if(type==="ripeti"){ n.n=3; n.body=[]; }
+  return n;
+}
+function elementoBlocco(nodo, inPalette){
+  const def = BLOCCHI[nodo.type];
+  const b = el("div", "blocco "+def.tipo+(inPalette?" in-palette":""));
+  b.dataset.bid = inPalette ? "" : nodo.id;
+  b.dataset.tipo = nodo.type;
+  if(nodo.type==="ripeti" && !inPalette){
+    const testa = el("div","testa-ripeti", ICONE.ripeti+"<span>RIPETI</span>");
+    const cont = el("div","contan");
+    const meno = el("button",null,"\u2212"), val = el("span","valore",nodo.n), piu = el("button",null,"+");
+    meno.onclick = e=>{ e.stopPropagation(); if(nodo.n>2){nodo.n--; val.textContent=nodo.n;} };
+    piu.onclick  = e=>{ e.stopPropagation(); if(nodo.n<12){nodo.n++; val.textContent=nodo.n;} };
+    cont.append(meno,val,piu);
+    testa.append(cont);
+    const x = el("button","x","\u00d7"); x.title="Togli";
+    x.onclick = e=>{ e.stopPropagation(); rimuoviNodo(nodo.id); };
+    testa.append(x);
+    const corpo = el("div","corpo-ripeti");
+    corpo.dataset.contiene = nodo.id;
+    corpo.dataset.vuoto = "Metti qui i blocchi da ripetere";
+    nodo.body.forEach(fig=>corpo.append(elementoBlocco(fig,false)));
+    b.append(testa, corpo);
+  } else {
+    b.innerHTML = ICONE[nodo.type] + "<span>" + def.testo + (nodo.type==="ripeti" ? " \u00d73" : "") + "</span>";
+    if(!inPalette){
+      const x = el("button","x","\u00d7"); x.title="Togli";
+      x.onclick = e=>{ e.stopPropagation(); rimuoviNodo(nodo.id); };
+      b.append(x);
+    }
+  }
+  agganciaPointer(b, inPalette, nodo);
+  return b;
+}
+function renderProgramma(){
+  const lp = $("#lista-programma");
+  lp.innerHTML = "";
+  programma.forEach(n=>lp.append(elementoBlocco(n,false)));
+  aggiornaHUD();
+}
+function rimuoviNodo(id){
+  if(inEsecuzione) return;
+  const r = trovaNodo(programma, id);
+  if(r){ r.lista.splice(r.lista.indexOf(r.b),1); renderProgramma(); }
+}
+
+/* ================= DRAG & DROP (Pointer Events) ================= */
+let drag = null; // {nodo, daPalette, ghost, partito, sx, sy}
+function agganciaPointer(elB, inPalette, nodo){
+  elB.addEventListener("pointerdown", ev=>{
+    if(inEsecuzione) return;
+    if(ev.target.closest(".x") || ev.target.closest(".contan")) return;
+    // se tocco un figlio dentro un ripeti, gestisce il figlio (stopPropagation)
+    ev.stopPropagation();
+    drag = { daPalette:inPalette, nodo, partito:false, sx:ev.clientX, sy:ev.clientY, sorgente:elB };
+    elB.setPointerCapture(ev.pointerId);
+  });
+  elB.addEventListener("pointermove", ev=>{
+    if(!drag || drag.sorgente!==elB) return;
+    const dx=ev.clientX-drag.sx, dy=ev.clientY-drag.sy;
+    if(!drag.partito && Math.hypot(dx,dy)>8){
+      drag.partito = true;
+      const g = elB.cloneNode(true);
+      g.classList.add("fantasma"); g.classList.remove("in-palette");
+      g.style.width = elB.getBoundingClientRect().width+"px";
+      document.body.append(g);
+      drag.ghost = g;
+      if(!drag.daPalette) elB.style.opacity = ".35";
+    }
+    if(drag.partito){
+      drag.ghost.style.left = ev.clientX+"px";
+      drag.ghost.style.top = ev.clientY+"px";
+      evidenziaDrop(ev.clientX, ev.clientY);
+    }
+  });
+  const fine = ev=>{
+    if(!drag || drag.sorgente!==elB) return;
+    const d = drag; drag = null;
+    if(d.ghost) d.ghost.remove();
+    if(!d.daPalette) elB.style.opacity = "";
+    pulisciDrop();
+    if(!d.partito){
+      if(d.daPalette){ // tap: aggiungi in fondo
+        if(contaBlocchi(programma) >= liv.max){ feedback("Zaino pieno!","Hai raggiunto il numero massimo di blocchi: prova a usarne meno, magari con RIPETI.",false); return; }
+        programma.push(nuovoNodo(d.nodo.type));
+        sfx.pop();
+        renderProgramma();
+      }
+      return;
+    }
+    eseguiDrop(d, ev.clientX, ev.clientY);
+  };
+  elB.addEventListener("pointerup", fine);
+  elB.addEventListener("pointercancel", fine);
+}
+function bersagliDrop(){
+  const lista = [ $("#lista-programma") ];
+  document.querySelectorAll(".corpo-ripeti").forEach(c=>lista.push(c));
+  return lista;
+}
+function bersaglioSotto(x,y,nodo){
+  const sotto = document.elementFromPoint(x,y);
+  if(!sotto) return null;
+  let t = sotto.closest(".corpo-ripeti");
+  if(t && nodo.type!=="ripeti") return t;       // niente ripeti dentro ripeti
+  t = sotto.closest("#lista-programma");
+  if(t) return t;
+  // tolleranza: vicino al pannello programma
+  const lp = $("#lista-programma").getBoundingClientRect();
+  if(x>lp.left-20 && x<lp.right+20 && y>lp.top-20 && y<lp.bottom+20) return $("#lista-programma");
+  return null;
+}
+function evidenziaDrop(x,y){
+  pulisciDrop();
+  const t = bersaglioSotto(x,y,drag.nodo);
+  if(t) t.classList.add("drop-attivo");
+}
+function pulisciDrop(){ bersagliDrop().forEach(b=>b && b.classList.remove("drop-attivo")); }
+function indiceInserimento(target, y, escludiId){
+  const figli = [...target.children].filter(c=>c.classList && c.classList.contains("blocco") && c.dataset.bid != escludiId);
+  let i = 0;
+  for(const f of figli){
+    const r = f.getBoundingClientRect();
+    if(y > r.top + r.height/2) i++;
+  }
+  return i;
+}
+function eseguiDrop(d, x, y){
+  const target = bersaglioSotto(x,y,d.nodo);
+  if(!target){ // drop fuori da un blocco del programma = eliminazione
+    if(!d.daPalette) rimuoviNodo(d.nodo.id);
+    return;
+  }
+  let nodo;
+  if(d.daPalette){
+    if(contaBlocchi(programma) >= liv.max){ feedback("Zaino pieno!","Hai raggiunto il numero massimo di blocchi per questo livello.",false); return; }
+    nodo = nuovoNodo(d.nodo.type);
+  } else {
+    const r = trovaNodo(programma, d.nodo.id);
+    if(!r) return;
+    // impedisci di trascinare un ripeti dentro se stesso
+    if(target.dataset.contiene && Number(target.dataset.contiene)===d.nodo.id) return;
+    r.lista.splice(r.lista.indexOf(r.b),1);
+    nodo = r.b;
+  }
+  sfx.pop();
+  const idx = indiceInserimento(target, y, d.daPalette?null:nodo.id);
+  if(target.id==="lista-programma"){
+    programma.splice(idx,0,nodo);
+  } else {
+    const rip = trovaNodo(programma, Number(target.dataset.contiene));
+    if(rip) rip.b.body.splice(idx,0,nodo); else programma.push(nodo);
+  }
+  renderProgramma();
+}
+
+/* ================= INTERPRETE ================= */
+const PAUSA = 420;
+const attesa = ms => new Promise(r=>setTimeout(r,ms));
+function evidenzia(id, on){
+  const e = document.querySelector('[data-bid="'+id+'"]');
+  if(e){ e.classList.toggle("evidenzia", on); if(on) e.scrollIntoView({block:"nearest", behavior:"smooth"}); }
+}
+async function muovi(nx,ny,salto){
+  if(salto) sfx.splash(); else sfx.bloop();
+  pesce.x=nx; pesce.y=ny;
+  posizionaFario(true);
+  const k = nx+","+ny;
+  if(mondo.larve.has(k) && !pesce.mangiate.has(k)){
+    pesce.mangiate.add(k);
+    const elL = document.querySelector('[data-larva="'+k+'"]');
+    if(elL){ elL.style.transition="opacity .3s"; elL.style.opacity="0"; }
+    sfx.gnam();
+    aggiornaHUD();
+  }
+  await attesa(salto?PAUSA+120:PAUSA);
+}
+async function esegui(lista, stato){
+  for(const b of lista){
+    if(stopRichiesto || stato.fine) return;
+    if(++stato.passi > 600){ stato.fine="LOOP"; stato.bloccoErr=b.id; return; }
+    evidenzia(b.id, true);
+    const [dx,dy] = DIRS[pesce.dir];
+    const davanti = cella(pesce.x+dx, pesce.y+dy);
+    if(b.type==="nuota"){
+      if(davanti==="#"){ stato.fine="ROCCIA"; stato.bloccoErr=b.id; evidenziaErr(b.id); return; }
+      if(davanti==="W"){ stato.fine="RAPIDA"; stato.bloccoErr=b.id; evidenziaErr(b.id); return; }
+      await muovi(pesce.x+dx, pesce.y+dy, false);
+    } else if(b.type==="giraS" || b.type==="giraD"){
+      pesce.dir = (b.type==="giraD") ? DESTRA_DI[pesce.dir] : SINISTRA_DI[pesce.dir];
+      pesce.angolo += (b.type==="giraD") ? 90 : -90;
+      sfx.tick();
+      posizionaFario(true);
+      await attesa(PAUSA-90);
+    } else if(b.type==="salta"){
+      if(davanti!=="W"){ stato.fine="NIENTE_CASCATA"; stato.bloccoErr=b.id; evidenziaErr(b.id); return; }
+      const dietro = cella(pesce.x+2*dx, pesce.y+2*dy);
+      if(dietro==="#"||dietro==="W"){ stato.fine="ATTERRAGGIO"; stato.bloccoErr=b.id; evidenziaErr(b.id); return; }
+      await muovi(pesce.x+2*dx, pesce.y+2*dy, true);
+    } else if(b.type==="seRD" || b.type==="seRS"){
+      if(davanti==="#"){
+        pesce.dir = (b.type==="seRD") ? DESTRA_DI[pesce.dir] : SINISTRA_DI[pesce.dir];
+        pesce.angolo += (b.type==="seRD") ? 90 : -90;
+        sfx.tick();
+        posizionaFario(true);
+        await attesa(PAUSA-90);
+      } else await attesa(140);
+    } else if(b.type==="seWS"){
+      if(davanti==="W"){
+        const dietro = cella(pesce.x+2*dx, pesce.y+2*dy);
+        if(dietro==="#"||dietro==="W"){ stato.fine="ATTERRAGGIO"; stato.bloccoErr=b.id; evidenziaErr(b.id); return; }
+        await muovi(pesce.x+2*dx, pesce.y+2*dy, true);
+      } else await attesa(140);
+    } else if(b.type==="ripeti"){
+      for(let i=0;i<b.n;i++){
+        await esegui(b.body, stato);
+        if(stopRichiesto || stato.fine) { evidenzia(b.id,false); return; }
+      }
+    }
+    evidenzia(b.id, false);
+    if(pesce.x===mondo.goal[0] && pesce.y===mondo.goal[1]){ stato.fine="OK"; return; }
+  }
+}
+function evidenziaErr(id){ /* il blocco resta evidenziato per indicare dove fermarsi a riflettere */
+  const e = document.querySelector('[data-bid="'+id+'"]'); if(e) e.classList.add("evidenzia");
+}
+const MESSAGGI = {
+  ROCCIA:["Splash, una roccia!","Fario si \u00e8 fermato contro un sasso. Guarda il blocco evidenziato: cosa c\u2019era davvero davanti al suo muso?"],
+  RAPIDA:["La corrente \u00e8 troppo forte","Dentro le rapide non si pu\u00f2 nuotare: per superarle serve il blocco SALTA LA CASCATA."],
+  NIENTE_CASCATA:["Niente cascata davanti","Fario pu\u00f2 saltare solo le cascate. Davanti a lui c\u2019era acqua tranquilla: bastava NUOTA."],
+  ATTERRAGGIO:["Atterraggio impossibile","Dopo il salto Fario deve trovare acqua libera: ricontrolla il percorso."],
+  NON_ARRIVATO:["Sorgente ancora lontana","Il programma \u00e8 finito ma Fario non \u00e8 arrivato. Osserva dove si \u00e8 fermato e aggiungi quello che manca."],
+  LOOP:["Fario gira in tondo","Sono passate tante mosse e la sorgente non si avvicina: controlla il numero di ripetizioni."],
+};
+async function avviaEsecuzione(){
+  if(inEsecuzione || contaBlocchi(programma)===0) return;
+  inEsecuzione = true; stopRichiesto = false;
+  $("#btn-esegui").classList.add("nascosto");
+  $("#btn-stop").classList.remove("nascosto");
+  $("#feedback").classList.remove("visibile");
+  ripristinaPesce();
+  const stato = { fine:null, passi:0 };
+  telemetria("esecuzione", {livello:liv.id, blocchi:contaBlocchi(programma)});
+  await esegui(programma, stato);
+  inEsecuzione = false;
+  $("#btn-esegui").classList.remove("nascosto");
+  $("#btn-stop").classList.add("nascosto");
+  aggiornaHUD();
+  if(stopRichiesto) return;
+  if(stato.fine==="OK"){ vittoria(); return; }
+  if(!stato.fine) stato.fine = "NON_ARRIVATO";
+  sfx.urto();
+  scuotiFario();
+  const m = MESSAGGI[stato.fine];
+  feedback(m[0], m[1] + (liv.aiuto ? "<br><i>Suggerimento: "+liv.aiuto+"</i>" : ""), false);
+  telemetria("tentativo", {livello:liv.id, esito:stato.fine});
+}
+function ripristinaPesce(){
+  document.querySelectorAll(".evidenzia").forEach(e=>e.classList.remove("evidenzia"));
+  pesce = { x:mondo.start[0], y:mondo.start[1], dir:liv.dir, angolo:ANGOLI[liv.dir], mangiate:new Set() };
+  document.querySelectorAll("[data-larva]").forEach(e=>{ e.style.transition="none"; e.style.opacity="1"; });
+  posizionaFario(false);
+  aggiornaHUD();
+}
+
+/* ================= VITTORIA ================= */
+const STELLA = piena => '<svg viewBox="0 0 24 24"><path d="M12 2.6l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.5 6.1 20.6l1.2-6.5L2.5 9.5l6.6-.9z" fill="'+(piena?'#D9A521':'#E4E7E4')+'" stroke="'+(piena?'#B5860F':'#C7CDC7')+'" stroke-width="1.4" stroke-linejoin="round"/></svg>';
+const SPUNTA = ok => ok
+  ? '<svg viewBox="0 0 24 24" fill="none" stroke="#1B6D3F" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg>'
+  : '<svg viewBox="0 0 24 24" fill="none" stroke="#8E979C" stroke-width="2.4" stroke-linecap="round"><circle cx="12" cy="12" r="8.6"/></svg>';
+function vittoria(){
+  sfx.vittoria();
+  const n = contaBlocchi(programma);
+  const tutteLarve = pesce.mangiate.size === mondo.larve.size;
+  const elegante = n <= liv.par;
+  const stelle = 1 + (tutteLarve?1:0) + (elegante?1:0);
+  const prima = progresso[liv.id] ? progresso[liv.id].stelle : 0;
+  progresso[liv.id] = { stelle: Math.max(prima, stelle) };
+  telemetria("vittoria", {livello:liv.id, stelle, blocchi:n});
+  const vecchioBox = $("#vit-codice"); if(vecchioBox) vecchioBox.remove();
+  $("#vit-titolo").textContent = liv.id===12 ? "Fario \u00e8 alla confluenza: qui nasce l\u2019Oglio!" : "Livello superato!";
+  $("#vit-stelle").innerHTML = [1,2,3].map(i=>'<span class="s">'+STELLA(i<=stelle)+'</span>').join("");
+  $("#vit-criteri").innerHTML =
+    '<li>'+SPUNTA(true)+' Fario \u00e8 arrivato alla sorgente del tratto</li>'
+    + '<li class="'+(tutteLarve?'':'no')+'">'+SPUNTA(tutteLarve)+' Tutte le larve raccolte ('+pesce.mangiate.size+'/'+mondo.larve.size+')</li>'
+    + '<li class="'+(elegante?'':'no')+'">'+SPUNTA(elegante)+' Soluzione elegante: al massimo '+liv.par+' blocchi (tu: '+n+')</li>';
+  $("#vit-criteri").insertAdjacentHTML("afterend",
+    '<div class="codice-box" id="vit-codice">Codice di risalita \u2014 scrivilo sul quaderno: ti riporta qui anche domani.'
+    + '<span class="parola">'+CODICI[liv.id]+'</span></div>');
+  $("#btn-prossimo").classList.toggle("nascosto", liv.id===12);
+  $("#ov-vittoria").classList.remove("nascosto");
+}
+
+/* ================= NAVIGAZIONE ================= */
+function sbloccato(id){
+  if(tuttoSbloccato || id===1) return true;
+  return !!progresso[id-1];
+}
+function disegnaMappa(){
+  const cont = $("#fiume-mappa");
+  cont.innerHTML = "";
+  // dalla sorgente (in alto) alla foce: ordine tratti invertito per la metafora della risalita
+  for(let t=TRATTI.length-1; t>=0; t--){
+    const sez = el("section","tratto");
+    const testa = el("div","tratto-testa",
+      "<h3>Tratto "+(t+1)+" \u00b7 "+TRATTI[t].nome+"</h3><span class='quota'>"+TRATTI[t].quota+"</span><span class='obiettivo'>"+TRATTI[t].obiettivo+"</span>");
+    const geo = el("div","tratto-geo", TRATTI[t].localita + " \u00b7 " + TRATTI[t].geo);
+    const fila = el("div","livelli-fila");
+    LIVELLI.filter(L=>L.tratto===t).forEach(L=>{
+      const ap = sbloccato(L.id);
+      const n = el("button","nodo"+(ap?"":" bloccato"));
+      const st = progresso[L.id] ? progresso[L.id].stelle : 0;
+      n.innerHTML = '<span class="num">Livello '+L.id+'</span><span class="nome">'+L.nome+'</span>'
+        + (ap
+          ? '<span class="stelle">'+[1,2,3].map(i=>STELLA(i<=st)).join("")+'</span>'
+          : '<svg class="lucchetto" viewBox="0 0 24 24" fill="none" stroke="#8E979C" stroke-width="2.2"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg>');
+      if(ap) n.onclick = ()=>apriLivello(L.id);
+      fila.append(n);
+    });
+    sez.append(testa, geo, fila);
+    cont.append(sez);
+  }
+}
+function apriLivello(id){
+  liv = LIVELLI.find(L=>L.id===id);
+  mondo = leggiMappa(liv);
+  programma = []; prossimoId = 1; stopRichiesto = false; inEsecuzione = false;
+  $("#schermo-mappa").classList.add("nascosto");
+  $("#schermo-livello").classList.remove("nascosto");
+  $("#btn-mappa-top").classList.remove("nascosto");
+  const T = TRATTI[liv.tratto];
+  $("#liv-titolo").textContent = "Livello "+liv.id+" \u00b7 "+liv.nome;
+  $("#liv-tratto").textContent = T.nome+" \u00b7 "+T.quota;
+  $("#liv-obiettivo").textContent = T.obiettivo;
+  $("#mini-istruzione").textContent = T.localita;
+  $("#liv-par").textContent = "Soluzione elegante: \u2264 "+liv.par+" blocchi";
+  // palette del livello
+  const pal = $("#palette");
+  pal.innerHTML = "";
+  liv.blocchi.forEach(t=>pal.append(elementoBlocco({type:t}, true)));
+  disegnaFiume();
+  ripristinaPesce();
+  renderProgramma();
+  if(liv.amiche && liv.amiche.length){
+    const a = liv.amiche[0];
+    setTimeout(()=>feedback(AMICHE[a.tipo].nome, a.frase, true), 600);
+  }
+  $("#btn-esegui").classList.remove("nascosto");
+  $("#btn-stop").classList.add("nascosto");
+  window.scrollTo({top:0});
+}
+function vaiMappa(){
+  stopRichiesto = true;
+  $("#ov-vittoria").classList.add("nascosto");
+  $("#schermo-livello").classList.add("nascosto");
+  $("#schermo-mappa").classList.remove("nascosto");
+  $("#btn-mappa-top").classList.add("nascosto");
+  $("#feedback").classList.remove("visibile");
+  disegnaMappa();
+  window.scrollTo({top:0});
+}
+
+/* ================= EVENTI GLOBALI ================= */
+$("#btn-esegui").onclick = avviaEsecuzione;
+$("#btn-stop").onclick = ()=>{ stopRichiesto = true; };
+$("#btn-riparti").onclick = ()=>{ if(!inEsecuzione){ ripristinaPesce(); $("#feedback").classList.remove("visibile"); } };
+$("#btn-svuota").onclick = ()=>{ if(!inEsecuzione){ programma=[]; renderProgramma(); } };
+$("#btn-mappa-top").onclick = vaiMappa;
+$("#btn-vai-mappa").onclick = vaiMappa;
+$("#btn-rigioca").onclick = ()=>{ $("#ov-vittoria").classList.add("nascosto"); apriLivello(liv.id); };
+$("#btn-prossimo").onclick = ()=>{ $("#ov-vittoria").classList.add("nascosto"); apriLivello(liv.id+1); };
+$("#btn-guida").onclick = ()=>{
+  const g = $("#guida-blocchi");
+  g.innerHTML = "";
+  Object.keys(BLOCCHI).forEach(t=>{
+    const r = el("div","riga");
+    const b = el("div","blocco "+BLOCCHI[t].tipo, ICONE[t]+"<span>"+BLOCCHI[t].testo+"</span>");
+    r.append(b, el("span",null,SPIEGAZIONI[t]));
+    g.append(r);
+  });
+  $("#ov-guida").classList.remove("nascosto");
+};
+$("#btn-chiudi-guida").onclick = ()=>$("#ov-guida").classList.add("nascosto");
+$("#btn-audio").onclick = ()=>{
+  audioOn = !audioOn;
+  $("#btn-audio").innerHTML = "Audio: " + (audioOn ? "s\u00ec" : "no");
+  if(audioOn){ ctxAudio(); masterA.gain.value = .55; }
+  else if(masterA){ masterA.gain.value = 0; }
+};
+$("#btn-codice").onclick = ()=>{
+  const parola = $("#campo-codice").value.trim().toUpperCase().replace(/\s+/g,"");
+  if(!parola) return;
+  const id = Object.keys(CODICI).find(k=>CODICI[k]===parola);
+  if(id){
+    for(let i=1;i<=Number(id);i++) if(!progresso[i]) progresso[i] = {stelle:0};
+    disegnaMappa();
+    $("#campo-codice").value = "";
+    const prox = Math.min(Number(id)+1, 12);
+    feedback("Bentornato sull\u2019Oglio!", "Risalita ripresa: il livello "+prox+" ti aspetta.", true);
+    telemetria("codice", {fino:id});
+  } else {
+    feedback("Codice non riconosciuto", "Controlla sul quaderno: i codici sono i nomi dei luoghi del viaggio, scritti tutti attaccati.", false);
+  }
+};
+$("#campo-codice").addEventListener("keydown", e=>{ if(e.key==="Enter") $("#btn-codice").click(); });
+$("#logo").onclick = ()=>{
+  if(++tapLogo >= 5 && !tuttoSbloccato){
+    tuttoSbloccato = true;
+    feedback("Modalit\u00e0 esplorazione", "Tutti i livelli sono ora accessibili dalla mappa.", true);
+    if(!$("#schermo-mappa").classList.contains("nascosto")) disegnaMappa();
+  }
+};
+
+/* ================= AVVIO ================= */
+disegnaMappa();
+const qs = new URLSearchParams(location.search);
+const lvParam = parseInt(qs.get("livello"),10);
+if(lvParam>=1 && lvParam<=12){ tuttoSbloccato = true; apriLivello(lvParam); }
+</script>
+</body>
+</html>
