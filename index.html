@@ -1685,9 +1685,14 @@ function disegnaFiume(){
   let amicheS = "";
   if(liv.amiche) liv.amiche.forEach((a,i)=>{
     const px = a.pos[0]*CELLA+32, py = a.pos[1]*CELLA+32;
-    amicheS += '<g class="amica" data-amica="'+i+'" style="cursor:pointer" transform="translate('+px+' '+py+') rotate('+(i%2? -24 : 18)+') scale(.82)">'
+    const ang = i%2 ? -24 : 18;
+    amicheS += '<g class="amica" data-amica="'+i+'" data-ang="'+ang+'" style="cursor:pointer" transform="translate('+px+' '+py+')">'
       + '<circle r="34" fill="#fff" opacity="0"/>'
-      + trotaSVG(STILE_TROTE[a.tipo].grad, STILE_TROTE[a.tipo]) + '</g>';
+      + '<g class="am-onde" pointer-events="none"></g>' + bolleAmica(i)
+      + '<g class="am-tuffo"><g class="am-gira" transform="rotate('+ang+')"><g class="am-nuoto">' + nuotoAmica(i)
+      + '<g class="am-salto"><g transform="scale(.82)">'
+      + trotaSVG(STILE_TROTE[a.tipo].grad, STILE_TROTE[a.tipo]) + riflessoAmica(a.tipo, i)
+      + '</g></g></g></g></g></g>';
   });
 
   // la tavola ha uno "spessore" (bordo scuro in basso) come una tessera da gioco
@@ -1705,6 +1710,8 @@ function disegnaFiume(){
     +   '<path d="M0 13 q 11.5 -9 23 0 t 23 0" fill="none" stroke="#FFFFFF" stroke-width="2.2" opacity=".5"/>'
     +   '<path d="M-6 22 q 11.5 -8 23 0 t 23 0" fill="none" stroke="'+B.onda+'" stroke-width="1.6" opacity=".45"/>'
     + '</pattern>'
+    + '<linearGradient id="gradIride" gradientUnits="userSpaceOnUse" x1="0" y1="-16" x2="0" y2="14" spreadMethod="reflect"><stop offset="0" stop-color="#F29BBE"/><stop offset=".3" stop-color="#B9A2F0"/><stop offset=".55" stop-color="#8FD3EE"/><stop offset=".8" stop-color="#A8EBC0"/><stop offset="1" stop-color="#F3E3A0"/>'
+    +   (FERMO ? '' : '<animateTransform attributeName="gradientTransform" type="translate" values="0 -18;0 18;0 -18" dur="3.4s" repeatCount="indefinite"/>') + '</linearGradient>'
     + '<clipPath id="clipacqua">'+acqueRect+'</clipPath>'
     + '<clipPath id="clipTavola"><rect x="0" y="0" width="'+W+'" height="'+H+'" rx="26"/></clipPath>'
     + clips
@@ -1728,10 +1735,11 @@ function disegnaFiume(){
     e.addEventListener("pointerdown", ev=>{
       ev.stopPropagation();
       const a = liv.amiche[Number(e.dataset.amica)];
-      sfx.gnam();
+      amicaSalta(e); // esce dall'acqua con uno spruzzo, poi da' il consiglio
       feedback(AMICHE[a.tipo].nome, a.frase, true, "amica");
     });
   });
+  preparaAmiche();
   if(pesce) posizionaFario(false); // alla prima apertura il pesce viene creato subito dopo da ripristinaPesce()
 }
 function posizionaFario(anima){
@@ -1749,6 +1757,7 @@ function scuotiFario(){
 /* ================= HUD / FEEDBACK ================= */
 function aggiornaHUD(){
   const tot = mondo.larve.size, prese = pesce.mangiate.size;
+  amicheContanoLarve(prese);
   const n = contaBlocchi(programma);
   const sup = n > liv.max;
   // traguardi: le tre stelle del livello, aggiornate dal vivo
@@ -2112,6 +2121,7 @@ function vittoria(){
   const elegante = n <= liv.par;
   const stelle = 1 + (tutteLarve?1:0) + (elegante?1:0);
   sfx.vittoria(stelle);
+  amicheFesteggiano();
   const prima = progresso[liv.id] ? progresso[liv.id].stelle : 0;
   progresso[liv.id] = { stelle: Math.max(prima, stelle) };
   telemetria("vittoria", {livello:liv.id, stelle, blocchi:n});
@@ -3005,6 +3015,111 @@ document.addEventListener("keydown", e=>{
   else if(cineI>=0 && e.key==="ArrowRight") inquadratura(cineI+1);
   else if(cineI>=0 && e.key==="ArrowLeft") inquadratura(cineI-1);
 });
+
+/* ================= LE AMICHE DEL LAGO: EFFETTI =================
+   Trota Lacustre e Trota Iridea non fanno parte del programma dello studente: qui prendono vita senza toccare
+   griglie, soluzioni e stelle. Restano "trasparenti": non bloccano caselle e Fario ci passa sopra.
+   - sempre: nuotano sul posto, fanno bollicine, hanno un riflesso (argento la Lacustre, cangiante l'Iridea);
+   - seguono Fario con il muso; lo salutano con una piroetta quando arriva nella casella accanto;
+   - si immergono quando Fario passa nella loro casella (spostarsi di lato coprirebbe larve e rive);
+   - al tocco saltano fuori dall'acqua; fanno il tifo a ogni larva; incoraggiano se il programma si ferma; festeggiano la vittoria.
+   Ogni movimento ha il suo gruppo SVG (am-tuffo > am-gira > am-nuoto > am-salto) e si scrive nell'attributo transform:
+   cosi' il centro di rotazione e' sempre la casella dell'amica, in ogni browser. Con "riduci movimento" attivo tutto resta fermo. */
+const FERMO = !!(window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches);
+let amiche = [], larveViste = 0;
+const frena = k => 1 - Math.pow(1-k, 3);
+function muoviNelTempo(ms, passo, fine){
+  if(FERMO){ passo(1); if(fine) fine(); return; }
+  const t0 = performance.now();
+  (function giro(t){ const k = Math.max(0, Math.min(1, (t - t0)/ms)); passo(k); if(k < 1) requestAnimationFrame(giro); else if(fine) fine(); })(t0);
+}
+function nuotoAmica(i){ // dondolio lento, diverso per ogni amica
+  return FERMO ? '' : '<animateTransform attributeName="transform" type="rotate" values="-4.5;4.5;-4.5" keyTimes="0;.5;1" calcMode="spline" keySplines=".45 0 .55 1;.45 0 .55 1" dur="'+(3.2+i*.7)+'s" repeatCount="indefinite"/>';
+}
+function bolleAmica(i){ // due bollicine che salgono ogni tanto
+  if(FERMO) return '';
+  return '<g class="am-bolle" fill="none" stroke="#fff" stroke-width="1.6" pointer-events="none">' + [0,1].map(k=>{
+    const inizio = (k*2.3 + i*1.1).toFixed(1);
+    return '<circle cx="'+(k ? 9 : -8)+'" cy="-8" r="'+(k ? 2.5 : 1.9)+'" opacity="0">'
+      + '<animate attributeName="cy" values="-8;-34" dur="4.8s" begin="'+inizio+'s" repeatCount="indefinite"/>'
+      + '<animate attributeName="opacity" values="0;.85;.55;0" keyTimes="0;.15;.7;1" dur="4.8s" begin="'+inizio+'s" repeatCount="indefinite"/></circle>';
+  }).join("") + '</g>';
+}
+function riflessoAmica(tipo, i){
+  if(tipo === "iridea") // la fascia cangiante che le da' il nome
+    return '<path d="M-6.5 -13 C -8.5 -4, -8 5, -5 11.5 M6.5 -13 C 8.5 -4, 8 5, 5 11.5" stroke="url(#gradIride)" stroke-width="3.8" fill="none" stroke-linecap="round" opacity=".92" pointer-events="none"/>';
+  if(FERMO) return '';
+  return '<ellipse cx="0" cy="-18" rx="2.6" ry="9" fill="#fff" opacity="0" pointer-events="none">' // un bagliore d'argento che scorre lungo il dorso
+    + '<animate attributeName="cy" values="-20;16" dur="4.2s" begin="'+(1+i)+'s" repeatCount="indefinite"/>'
+    + '<animate attributeName="opacity" values="0;.6;0;0" keyTimes="0;.2;.45;1" dur="4.2s" begin="'+(1+i)+'s" repeatCount="indefinite"/></ellipse>';
+}
+function preparaAmiche(){
+  amiche = [...document.querySelectorAll("#svg-fiume .amica")].map(el=>{
+    const a = liv.amiche[Number(el.dataset.amica)];
+    return { el, x:a.pos[0], y:a.pos[1], ang:Number(el.dataset.ang), vicino:false, sotto:false, impegnata:false, immersione:0,
+      gira:el.querySelector(".am-gira"), salto:el.querySelector(".am-salto"), tuffo:el.querySelector(".am-tuffo"), onde:el.querySelector(".am-onde") };
+  });
+  larveViste = 0;
+}
+function ondaAmica(A, ritardo){ // un cerchio che si allarga sull'acqua
+  if(FERMO) return;
+  setTimeout(()=>{
+    const c = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+    c.setAttribute("fill", "none"); c.setAttribute("stroke", "#fff"); c.setAttribute("stroke-width", "2.5");
+    A.onde.append(c);
+    muoviNelTempo(720, k=>{ c.setAttribute("r", (10 + 26*frena(k)).toFixed(1)); c.setAttribute("opacity", (.85*(1-k)).toFixed(2)); }, ()=>c.remove());
+  }, ritardo || 0);
+}
+function mossaAmica(A, ms, forma, fine){ // un movimento alla volta sul gruppo del salto
+  if(A.impegnata || FERMO) return false;
+  A.impegnata = true;
+  muoviNelTempo(ms, k=>A.salto.setAttribute("transform", forma(k)), ()=>{ A.salto.removeAttribute("transform"); A.impegnata = false; if(fine) fine(); });
+  return true;
+}
+const salutaAmica = A => { if(mossaAmica(A, 760, k=>"rotate("+(360*frena(k)).toFixed(1)+")")){ ondaAmica(A, 80); if(audioOn) try{ nota("sine", 520, 820, .1, .07); }catch(e){} } };
+const tifaAmica = A => mossaAmica(A, 460, k=>"rotate("+(Math.sin(k*Math.PI*4)*14*(1-k)).toFixed(1)+")");
+const incoraggiaAmica = A => mossaAmica(A, 620, k=>"translate(0 "+(-8*Math.sin(Math.PI*k)).toFixed(1)+")");
+function saltaAmica(A, zitta){
+  if(mossaAmica(A, 640, k=>"scale("+(1 + .45*Math.sin(Math.PI*k)).toFixed(3)+") rotate("+(Math.sin(k*Math.PI*2)*12).toFixed(1)+")", ()=>{ ondaAmica(A); ondaAmica(A, 140); })){
+    if(!zitta) sfx.splash();
+  } else if(!zitta) sfx.gnam();
+}
+function amicaSalta(el){ const A = amiche.find(q=>q.el === el); if(A) saltaAmica(A); else sfx.gnam(); }
+function tuffaAmica(A, giu, conMoto){ // si immerge per lasciar passare Fario, poi riemerge
+  const da = A.immersione, a = giu ? 1 : 0;
+  const scrivi = v => { A.tuffo.setAttribute("opacity", (1 - .68*v).toFixed(2)); A.tuffo.setAttribute("transform", "scale("+(1 - .26*v).toFixed(3)+")"); };
+  A.immersione = a;
+  if(conMoto && !FERMO){ muoviNelTempo(300, k=>scrivi(da + (a-da)*frena(k))); ondaAmica(A); } else scrivi(a);
+}
+function amicheSeguonoFario(conMoto){
+  if(!pesce || !amiche.length) return;
+  amiche.forEach(A=>{
+    const dx = pesce.x - A.x, dy = pesce.y - A.y, dist = Math.abs(dx) + Math.abs(dy);
+    if(dist > 0){ // il muso verso Fario, per la via piu' breve
+      const da = A.ang, giro = ((Math.atan2(dx, -dy)*180/Math.PI - da + 540) % 360) - 180;
+      A.ang = da + giro;
+      if(conMoto && !FERMO && Math.abs(giro) > 1) muoviNelTempo(380, k=>A.gira.setAttribute("transform", "rotate("+(da + giro*frena(k)).toFixed(1)+")"));
+      else A.gira.setAttribute("transform", "rotate("+A.ang.toFixed(1)+")");
+    }
+    if((dist === 0) !== A.sotto){ A.sotto = dist === 0; tuffaAmica(A, A.sotto, conMoto); }
+    if(dist === 1 && !A.vicino && conMoto) salutaAmica(A);
+    A.vicino = dist === 1;
+  });
+}
+function amicheContanoLarve(prese){
+  if(prese > larveViste && inEsecuzione) amiche.forEach(tifaAmica);
+  larveViste = prese;
+}
+function amicheFesteggiano(){
+  if(FERMO) return;
+  const qui = liv;
+  amiche.forEach((A,i)=>[300, 1150, 2000].forEach((t,k)=>setTimeout(()=>{ if(liv === qui) (k === 1 ? salutaAmica : q=>saltaAmica(q, true))(A); }, t + i*160)));
+}
+/* le due funzioni originali restano com'erano: qui si aggiunge solo cio' che fanno le amiche subito dopo */
+const posizionaFarioSolo = posizionaFario;
+posizionaFario = function(anima){ posizionaFarioSolo(anima); amicheSeguonoFario(anima); };
+const scuotiFarioSolo = scuotiFario;
+scuotiFario = function(){ scuotiFarioSolo(); amiche.forEach(incoraggiaAmica); };
 
 /* ================= AVVIO ================= */
 disegnaHero();
